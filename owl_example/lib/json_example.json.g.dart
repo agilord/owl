@@ -93,7 +93,8 @@ abstract class ChildClassMapper {
     return (new _owl_json.MapBuilder(ordered: false)
           ..put('id', object.id)
           ..put('left', ChildClassMapper.map(object.left))
-          ..put('right', ChildClassMapper.map(object.right)))
+          ..put('right', ChildClassMapper.map(object.right))
+          ..put('map', object.map))
         .toMap();
   }
 
@@ -104,6 +105,7 @@ abstract class ChildClassMapper {
     object.id = map['id'];
     object.left = ChildClassMapper.parse(map['left']);
     object.right = ChildClassMapper.parse(map['right']);
+    object.map = map['map'];
     return object;
   }
 

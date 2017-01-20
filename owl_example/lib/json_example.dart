@@ -52,4 +52,7 @@ class ChildClass {
   ///
   @Transient()
   int transientField;
+
+  @JsonField(native: true)
+  Map map;
 }

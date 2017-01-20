@@ -114,6 +114,7 @@ class _Field {
   _Field.fromElement(FieldElement elem) {
     fieldName = elem.name;
     keyName = elem.name;
+    final jsonField = getAnnotation(elem, JsonField);
 
     final String fieldType = elem.type.toString();
     if (fieldType.startsWith('List<') && fieldType.endsWith('>')) {
@@ -124,7 +125,9 @@ class _Field {
       baseType = fieldType;
     }
 
-    if (!isNativeJson(baseType)) {
+    bool isNative =
+        isNativeJson(baseType) || boolValue(jsonField, 'native', false);
+    if (!isNative) {
       String mapperClass;
       if (baseType == 'DateTime') {
         mapperClass = '$_coreAlias.DateTimeMapper';
@@ -135,9 +138,8 @@ class _Field {
       parserFn = '$mapperClass.parse';
     }
 
-    final mapField = getAnnotation(elem, JsonField);
-    if (mapField != null) {
-      keyName = stringValue(mapField, 'key', keyName);
+    if (jsonField != null) {
+      keyName = stringValue(jsonField, 'key', keyName);
       // TODO: implement overriding mapperFn and parserFn
     }
   }

@@ -17,8 +17,12 @@ class JsonField {
   /// The key for the mapping. By default it is the field's name.
   final String key;
 
+  /// Indicates that they field (especially if it is `List` or `Map`) accepts
+  /// the native JSON values without additional mapping.
+  final bool native;
+
   /// Override mapper methods for the field.
-  const JsonField({this.key});
+  const JsonField({this.key, this.native: false});
 }
 
 /// Marks a field transient, not part of the mapping.
