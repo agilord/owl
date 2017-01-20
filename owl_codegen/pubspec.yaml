@@ -1,16 +1,16 @@
 name: owl_codegen
 description: >
     Source code generator for JSON serialization, HTTP APIs and SQL CRUD.
-version: 0.1.0
+version: 0.1.1
 author: Istvan Soos <istvan.soos@agilord.com>
 
 homepage: https://github.com/agilord/owl
 
 environment:
-  sdk: '>=1.0.0 <2.0.0'
+  sdk: '>=1.20.0 <2.0.0'
 
 dependencies:
-  owl: '0.1.0'
+  owl: ^0.1.1
   args: 'any'
   build_runner: 'any'
   id: 'any'
