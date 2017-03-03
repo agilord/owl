@@ -39,7 +39,7 @@ class PostgresSqlGenerator extends Generator {
         sqls.addAll(_createReferences(table));
       }
       final sqlVarName =
-          new Id(buildStep.input.id.path.split('/').last.split('.').first)
+          new Id(buildStep.inputId.path.split('/').last.split('.').first)
               .camel;
 
       final sqlVarBlock = '\n/// DDL statements.\n'

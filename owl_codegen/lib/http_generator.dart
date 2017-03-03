@@ -231,7 +231,7 @@ class HttpServerGenerator extends Generator {
 }
 
 String _jsonMapping(BuildStep buildStep) =>
-    '${buildStep.input.id.path.split('/').last.split('.').first}.json.g.dart';
+    '${buildStep.inputId.path.split('/').last.split('.').first}.json.g.dart';
 
 _Api _parse(ClassElement element) {
   final DartObject apiAnnotation = getAnnotation(element, HttpApi);
