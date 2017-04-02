@@ -37,7 +37,7 @@ List<String> getSqlCrudExampleDdl({String schema}) {
     """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS entity_id INTEGER PRIMARY KEY;""",
     """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS detail_id INTEGER PRIMARY KEY;""",
     """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS is_active BOOLEAN ;""",
-    """ALTER TABLE ${schemaPrefix}entity_detail ADD CONSTRAINT fk_entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
+    """ALTER TABLE ${schemaPrefix}entity_detail ADD CONSTRAINT fk__entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
   ];
 }
 

@@ -317,7 +317,7 @@ _ForeignKey _parseForeignKey(String tableName, FieldElement field,
   }
   fk.sourceColumns = [column.columnName];
   if (fk.name == null) {
-    fk.name = 'fk_${tableName}__${field.name}__${fk.table}';
+    fk.name = 'fk__${tableName}__${field.name}__${fk.table}';
   }
   return fk;
 }
