@@ -218,7 +218,8 @@ _Table _parseClass(ClassElement element, {bool skipReferences: false}) {
       table.columns.add(column);
       if (!skipReferences) {
         getAnnotations(field, SqlForeignKey).forEach((obj) {
-          table.foreignKeys.add(_parseForeignKey(field, column, obj));
+          table.foreignKeys
+              .add(_parseForeignKey(table.tableName, field, column, obj));
         });
       }
     }
@@ -285,8 +286,8 @@ Map<String, String> _resolvedDartTypes = {
   'DateTime': 'TIMESTAMP'
 };
 
-_ForeignKey _parseForeignKey(
-    FieldElement field, _Column column, DartObject foreignKey) {
+_ForeignKey _parseForeignKey(String tableName, FieldElement field,
+    _Column column, DartObject foreignKey) {
   final _ForeignKey fk = new _ForeignKey();
   final reference = foreignKey.getField('reference');
   if (reference == null || reference.isNull) {
@@ -302,6 +303,9 @@ _ForeignKey _parseForeignKey(
     fk.targetColumns = [tableRef.primaryKeys.single.columnName];
   }
   fk.sourceColumns = [column.columnName];
+  if (fk.name == null) {
+    fk.name = 'fk_${tableName}__${field.name}__${fk.table}';
+  }
   return fk;
 }
 
@@ -332,6 +336,7 @@ class _Column {
 }
 
 class _ForeignKey {
+  String name;
   String table;
   List<String> sourceColumns;
   List<String> targetColumns;
@@ -343,14 +348,14 @@ String _createTable(_Table table) {
   final String columns =
       table.columns.map((c) => '${c.columnName} ${c.resolvedType}').join(', ');
   final String pks = table.primaryKeys.map((c) => c.columnName).join(', ');
-  return 'CREATE TABLE ${table.tableName}($columns, PRIMARY KEY($pks));';
+  return 'CREATE TABLE IF NOT EXISTS ${table.tableName}($columns, PRIMARY KEY($pks));';
 }
 
 List<String> _createReferences(_Table table) {
   final List<String> result = [];
   for (_ForeignKey fk in table.foreignKeys) {
     result.add('ALTER TABLE ${table.tableName} '
-        'ADD CONSTRAINT fk_${result.length} '
+        'ADD CONSTRAINT ${fk.name} '
         'FOREIGN KEY (${fk.sourceColumns.join(', ')}) '
         'REFERENCES ${fk.table} (${fk.targetColumns.join(', ')})'
         '${_constraint('ON UPDATE', fk.onUpdate)}'

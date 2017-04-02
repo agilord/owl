@@ -42,6 +42,9 @@ class SqlColumn {
 
 /// Describes a foreign key constraint on a single column.
 class SqlForeignKey {
+  /// The foreign key's name.
+  final String name;
+
   /// The target table's name.
   final String table;
 
@@ -60,7 +63,12 @@ class SqlForeignKey {
 
   /// Describes a foreign key constraint on a single column.
   const SqlForeignKey(
-      {this.table, this.column, this.reference, this.onUpdate, this.onDelete});
+      {this.name,
+      this.table,
+      this.column,
+      this.reference,
+      this.onUpdate,
+      this.onDelete});
 }
 
 /// Standard SQL type.

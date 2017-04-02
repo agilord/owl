@@ -21,9 +21,9 @@ import 'package:postgresql/postgresql.dart' as pg;
 
 /// DDL statements.
 final List<String> sqlCrudExampleDdl = <String>[
-  """CREATE TABLE my_custom_entity(entity_id INTEGER, ts TIMESTAMP, some_other_column TEXT, external_id UUID, version INTEGER, PRIMARY KEY(entity_id));""",
-  """CREATE TABLE entity_detail(entity_id INTEGER, detail_id INTEGER, is_active BOOLEAN, PRIMARY KEY(entity_id, detail_id));""",
-  """ALTER TABLE entity_detail ADD CONSTRAINT fk_0 FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
+  """CREATE TABLE IF NOT EXISTS my_custom_entity(entity_id INTEGER, ts TIMESTAMP, some_other_column TEXT, external_id UUID, version INTEGER, PRIMARY KEY(entity_id));""",
+  """CREATE TABLE IF NOT EXISTS entity_detail(entity_id INTEGER, detail_id INTEGER, is_active BOOLEAN, PRIMARY KEY(entity_id, detail_id));""",
+  """ALTER TABLE entity_detail ADD CONSTRAINT fk_entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
 ];
 
 // **************************************************************************
