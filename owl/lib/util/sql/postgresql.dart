@@ -41,6 +41,9 @@ class _BaseQuery {
 
 /// Simple INSERT query builder.
 class SimpleCreate extends _BaseQuery {
+  /// The database schema.
+  final String schema;
+
   /// The table name.
   final String table;
 
@@ -51,8 +54,9 @@ class SimpleCreate extends _BaseQuery {
   final List<String> clear;
 
   /// Simple INSERT query builder.
-  SimpleCreate({this.table, this.set, this.clear}) {
-    final StringBuffer sb = new StringBuffer('INSERT INTO $table');
+  SimpleCreate({this.schema, this.table, this.set, this.clear}) {
+    final String schemaPrefix = schema == null ? '' : schema + '.';
+    final StringBuffer sb = new StringBuffer('INSERT INTO $schemaPrefix$table');
     final List<String> columns = [];
     final List<String> placeholders = [];
     for (String column in set.keys) {
@@ -80,6 +84,9 @@ class SimpleCreate extends _BaseQuery {
 
 /// Simple SELECT query builder.
 class SimpleSelect extends _BaseQuery {
+  /// The database schema.
+  final String schema;
+
   /// The table name.
   final String table;
 
@@ -97,18 +104,20 @@ class SimpleSelect extends _BaseQuery {
 
   /// Simple SELECT query builder.
   SimpleSelect(
-      {this.table,
+      {this.schema,
+      this.table,
       this.columns,
       this.where,
       this.limit: -1,
       this.forUpdate: false}) {
+    final String schemaPrefix = schema == null ? '' : schema + '.';
     final StringBuffer sb = new StringBuffer('SELECT ');
     if (columns == null || columns.isEmpty) {
       sb.write('*');
     } else {
       sb.write(columns.join(', '));
     }
-    sb.write(' FROM $table');
+    sb.write(' FROM $schemaPrefix$table');
     _addWhere(sb, where);
     if (limit > -1) {
       sb.write(' LIMIT $limit');
@@ -136,6 +145,9 @@ class SimpleSelect extends _BaseQuery {
 
 /// Simple UPDATE query builder.
 class SimpleUpdate extends _BaseQuery {
+  /// The database schema.
+  final String schema;
+
   /// The table name.
   final String table;
 
@@ -149,8 +161,9 @@ class SimpleUpdate extends _BaseQuery {
   final Map<String, dynamic> where;
 
   /// Simple UPDATE query builder.
-  SimpleUpdate({this.table, this.set, this.clear, this.where}) {
-    final StringBuffer sb = new StringBuffer('UPDATE $table');
+  SimpleUpdate({this.schema, this.table, this.set, this.clear, this.where}) {
+    final String schemaPrefix = schema == null ? '' : schema + '.';
+    final StringBuffer sb = new StringBuffer('UPDATE $schemaPrefix$table');
     final List<String> updates = [];
     for (String column in set.keys) {
       if (clear?.contains(column) == true) continue;
@@ -176,6 +189,9 @@ class SimpleUpdate extends _BaseQuery {
 
 /// Simple DELETE query builder.
 class SimpleDelete extends _BaseQuery {
+  /// The database schema.
+  final String schema;
+
   /// The table name.
   final String table;
 
@@ -183,8 +199,9 @@ class SimpleDelete extends _BaseQuery {
   final Map<String, dynamic> where;
 
   /// Simple UPDATE query builder.
-  SimpleDelete({this.table, this.where}) {
-    final StringBuffer sb = new StringBuffer('DELETE FROM $table');
+  SimpleDelete({this.schema, this.table, this.where}) {
+    final String schemaPrefix = schema == null ? '' : schema + '.';
+    final StringBuffer sb = new StringBuffer('DELETE FROM $schemaPrefix$table');
     _addWhere(sb, where);
     _query = sb.toString();
   }

@@ -2,7 +2,7 @@ name: owl_example
 description: >
     Owl code generator examples.
     It supports JSON serialization, HTTP APIs and SQL CRUD.
-version: 0.1.1
+version: 0.1.2
 author: Istvan Soos <istvan.soos@agilord.com>
 
 homepage: https://github.com/agilord/owl

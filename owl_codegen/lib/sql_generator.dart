@@ -39,8 +39,7 @@ class PostgresSqlGenerator extends Generator {
         sqls.addAll(_createReferences(table));
       }
       final sqlVarName =
-          new Id(buildStep.inputId.path.split('/').last.split('.').first)
-              .camel;
+          new Id(buildStep.inputId.path.split('/').last.split('.').first).camel;
 
       final sqlVarBlock = '\n/// DDL statements.\n'
           'final List<String> ${sqlVarName}Ddl = '
@@ -118,7 +117,7 @@ class PostgresSqlGenerator extends Generator {
       code += '/// Insert a row into ${table.tableName}.\n';
       code += 'static Future<int> create(pg.Connection connection, '
           '${element.name} $varName, '
-          '{List<String> clear, bool strict: true, bool ifNotExists: false}) async {';
+          '{String schema, List<String> clear, bool strict: true, bool ifNotExists: false}) async {';
       code += 'if (ifNotExists) {\n';
 
       code += '  final ${element.name} _x = await read(connection, '
@@ -126,8 +125,8 @@ class PostgresSqlGenerator extends Generator {
           ' strict: false);';
       code += '  if (_x != null) return 0;';
       code += '}\n';
-      code +=
-          'return await new $_crudPgAlias.SimpleCreate(table: \'${table.tableName}\', '
+      code += 'return await new $_crudPgAlias.SimpleCreate(schema: schema, '
+          'table: \'${table.tableName}\', '
           'set: map($varName), clear: clear)'
           '.execute(connection, strict: strict);';
       code += '}\n';
@@ -137,12 +136,12 @@ class PostgresSqlGenerator extends Generator {
       code += 'static Future<${element.name}> read('
           'pg.Connection connection, '
           '$pkFnParams, '
-          '{List<String> columns, bool forUpdate: false, bool strict: true}) async {\n';
+          '{String schema, List<String> columns, bool forUpdate: false, bool strict: true}) async {\n';
       for (_Column c in pks) {
         code += 'assert(${c.field} != null);\n';
       }
       code += 'final pg.Row _row = await new $_crudPgAlias.SimpleSelect('
-          'table: \'${table.tableName}\', columns: columns,';
+          'schema: schema, table: \'${table.tableName}\', columns: columns,';
       code += 'where: <String, dynamic>{$pkWhere},';
       code += 'limit: (strict ? 2:1), '
           'forUpdate: forUpdate).get(connection, strict: strict);';
@@ -153,7 +152,7 @@ class PostgresSqlGenerator extends Generator {
       code += '/// Update a row in ${table.tableName}.\n';
       code += 'static Future<int> update('
           'pg.Connection connection, '
-          '${element.name} $varName, {';
+          '${element.name} $varName, {String schema, ';
       if (vks.isNotEmpty) {
         code += '\n// ignore: parameter_assignments\n';
       }
@@ -174,8 +173,8 @@ class PostgresSqlGenerator extends Generator {
         code += '\'${c.columnName}\': ${c.field},';
       }
       code += '};';
-      code +=
-          'return await new $_crudPgAlias.SimpleUpdate(table: \'${table.tableName}\', '
+      code += 'return await new $_crudPgAlias.SimpleUpdate('
+          'schema: schema, table: \'${table.tableName}\', '
           'set: _set, clear: clear, where: _where)'
           '.execute(connection, strict: strict);';
       code += '}\n';
@@ -185,12 +184,12 @@ class PostgresSqlGenerator extends Generator {
       code += 'static Future<int> delete('
           'pg.Connection connection, '
           '$pkFnParams, '
-          '{${vkFnParams}bool strict: true}) async {';
+          '{String schema, ${vkFnParams}bool strict: true}) async {';
       for (_Column c in pks) {
         code += 'assert(${c.field} != null);\n';
       }
-      code +=
-          'return await new $_crudPgAlias.SimpleDelete(table: \'${table.tableName}\', '
+      code += 'return await new $_crudPgAlias.SimpleDelete('
+          'schema: schema, table: \'${table.tableName}\', '
           'where: <String, dynamic>{$allWhere}).execute(connection, strict: strict);';
       code += '}\n';
 

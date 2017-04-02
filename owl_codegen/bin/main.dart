@@ -36,5 +36,5 @@ Future main(List<String> args) async {
             generatedExtension: '.http_server.g.dart', isStandalone: true),
         new InputSet(config.package, config.globs));
   }
-  await build(phases);
+  await build(phases, deleteFilesByDefault: true);
 }

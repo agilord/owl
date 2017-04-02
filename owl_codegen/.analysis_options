@@ -38,8 +38,8 @@ linter:
     - package_names
     - package_prefixed_library_names
     - parameter_assignments
-    - prefer_final_fields
-    - prefer_final_locals
+#    - prefer_final_fields
+#    - prefer_final_locals
     - prefer_is_not_empty
     - public_member_api_docs
     - slash_for_doc_comments

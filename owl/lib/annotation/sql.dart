@@ -65,13 +65,37 @@ class SqlForeignKey {
 
 /// Standard SQL type.
 enum SqlType {
-  /// 32-bit integer.
+  /// Boolean.
+  bool,
+
+  /// 16-bit (2-byte) integer.
+  int16,
+
+  /// 32-bit (4-byte) integer.
   int32,
 
-  /// 64-bit integer.
+  /// 64-bit (8-byte) integer.
   int64,
 
-  /// UUID
+  /// 32-bit (4-byte) floating point value.
+  float32,
+
+  /// 64-bit (8-byte) floating point value.
+  float64,
+
+  /// Autoincrementing 32-bit (4-byte) integer.
+  serial32,
+
+  /// Autoincrementing 64-bit (8-byte) integer.
+  serial64,
+
+  /// String with any length.
+  text,
+
+  /// Timestamp with time zone.
+  timestamp,
+
+  /// A 128-bit UUID value.
   uuid,
 }
 
