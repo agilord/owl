@@ -27,7 +27,15 @@ List<String> getSqlCrudExampleDdl({String schema}) {
   final String schemaPrefix = schema == null ? '' : schema + '.';
   return <String>[
     """CREATE TABLE IF NOT EXISTS ${schemaPrefix}my_custom_entity(entity_id INTEGER, ts TIMESTAMP, some_other_column TEXT, external_id UUID, version INTEGER, PRIMARY KEY(entity_id));""",
+    """ALTER TABLE ${schemaPrefix}my_custom_entity ADD COLUMN IF NOT EXISTS entity_id INTEGER PRIMARY KEY;""",
+    """ALTER TABLE ${schemaPrefix}my_custom_entity ADD COLUMN IF NOT EXISTS ts TIMESTAMP ;""",
+    """ALTER TABLE ${schemaPrefix}my_custom_entity ADD COLUMN IF NOT EXISTS some_other_column TEXT ;""",
+    """ALTER TABLE ${schemaPrefix}my_custom_entity ADD COLUMN IF NOT EXISTS external_id UUID ;""",
+    """ALTER TABLE ${schemaPrefix}my_custom_entity ADD COLUMN IF NOT EXISTS version INTEGER ;""",
     """CREATE TABLE IF NOT EXISTS ${schemaPrefix}entity_detail(entity_id INTEGER, detail_id INTEGER, is_active BOOLEAN, PRIMARY KEY(entity_id, detail_id));""",
+    """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS entity_id INTEGER PRIMARY KEY;""",
+    """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS detail_id INTEGER PRIMARY KEY;""",
+    """ALTER TABLE ${schemaPrefix}entity_detail ADD COLUMN IF NOT EXISTS is_active BOOLEAN ;""",
     """ALTER TABLE ${schemaPrefix}entity_detail ADD CONSTRAINT fk_entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
   ];
 }

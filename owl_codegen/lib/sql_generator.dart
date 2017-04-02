@@ -34,6 +34,9 @@ class PostgresSqlGenerator extends Generator {
           listClasses(element, SqlTable).map(_parseClass).toList();
       for (_Table table in tables) {
         sqls.add(_createTable(table));
+        for (_Column column in table.columns) {
+          sqls.add(_addColumn(table, column));
+        }
       }
       for (_Table table in tables) {
         sqls.addAll(_createReferences(table));
@@ -358,6 +361,15 @@ String _createTable(_Table table) {
       table.columns.map((c) => '${c.columnName} ${c.resolvedType}').join(', ');
   final String pks = table.primaryKeys.map((c) => c.columnName).join(', ');
   return 'CREATE TABLE IF NOT EXISTS \${schemaPrefix}${table.tableName}($columns, PRIMARY KEY($pks));';
+}
+
+String _addColumn(_Table table, _Column column) {
+  List<String> constraints = [];
+  if (column.isPrimaryKey) {
+    constraints.add('PRIMARY KEY');
+  }
+  return 'ALTER TABLE \${schemaPrefix}${table.tableName} '
+      'ADD COLUMN IF NOT EXISTS ${column.columnName} ${column.resolvedType} ${constraints.join(' ')};';
 }
 
 List<String> _createReferences(_Table table) {
