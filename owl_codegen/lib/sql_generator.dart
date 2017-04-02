@@ -48,6 +48,7 @@ class PostgresSqlGenerator extends Generator {
               .capCamel;
 
       final sqlVarBlock = '\n/// DDL statements for the default schema.\n'
+          '@Deprecated(\'Use get${sqlFnName}Ddl() instead.\')'
           'final List<String> ${sqlVarName}Ddl = get${sqlFnName}Ddl();\n';
 
       final sqlFnBlock = '\n/// DDL statements for a given schema.\n'

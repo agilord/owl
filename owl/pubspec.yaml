@@ -2,7 +2,7 @@ name: owl
 description: >
     Client libraries (annotations and utilities) for the owl source code generator.
     It supports JSON serialization, HTTP APIs and SQL CRUD.
-version: 0.1.2
+version: 0.2.0
 author: Istvan Soos <istvan.soos@agilord.com>
 
 homepage: https://github.com/agilord/owl
