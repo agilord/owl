@@ -169,12 +169,12 @@ class SimpleUpdate extends _BaseQuery {
       if (clear?.contains(column) == true) continue;
       final param = set[column];
       if (param != null) {
-        updates.add('($column = @${_params.length})');
+        updates.add('$column = @${_params.length}');
         _params.add(param);
       }
     }
     clear?.forEach((String column) {
-      updates.add('($column = @${_params.length})');
+      updates.add('$column = @${_params.length}');
       _params.add(null);
     });
     sb.write(' SET ${updates.join(', ')}');

@@ -366,9 +366,10 @@ String _createTable(_Table table) {
 
 String _addColumn(_Table table, _Column column) {
   List<String> constraints = [];
-  if (column.isPrimaryKey) {
-    constraints.add('PRIMARY KEY');
-  }
+  // TODO: review how this could be done
+//  if (column.isPrimaryKey) {
+//    constraints.add('PRIMARY KEY');
+//  }
   return 'ALTER TABLE \${schemaPrefix}${table.tableName} '
       'ADD COLUMN IF NOT EXISTS ${column.columnName} ${column.resolvedType} ${constraints.join(' ')};';
 }
