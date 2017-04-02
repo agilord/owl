@@ -40,11 +40,20 @@ class PostgresSqlGenerator extends Generator {
       }
       final sqlVarName =
           new Id(buildStep.inputId.path.split('/').last.split('.').first).camel;
+      final sqlFnName =
+          new Id(buildStep.inputId.path.split('/').last.split('.').first)
+              .capCamel;
 
-      final sqlVarBlock = '\n/// DDL statements.\n'
-          'final List<String> ${sqlVarName}Ddl = '
-          '<String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n';
-      return '$libBlock\n$sqlVarBlock\n';
+      final sqlVarBlock = '\n/// DDL statements for the default schema.\n'
+          'final List<String> ${sqlVarName}Ddl = get${sqlFnName}Ddl();\n';
+
+      final sqlFnBlock = '\n/// DDL statements for a given schema.\n'
+          'List<String> get${sqlFnName}Ddl({String schema}) {\n'
+          '  final String schemaPrefix = schema == null ? \'\': schema + \'.\';\n'
+          '  return <String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n'
+          '}';
+
+      return '$libBlock\n$sqlVarBlock\n$sqlFnBlock\n';
     }
     if (element is ClassElement && hasAnnotation(element, SqlTable)) {
       final _Table table = _parseClass(element);
@@ -348,13 +357,13 @@ String _createTable(_Table table) {
   final String columns =
       table.columns.map((c) => '${c.columnName} ${c.resolvedType}').join(', ');
   final String pks = table.primaryKeys.map((c) => c.columnName).join(', ');
-  return 'CREATE TABLE IF NOT EXISTS ${table.tableName}($columns, PRIMARY KEY($pks));';
+  return 'CREATE TABLE IF NOT EXISTS \${schemaPrefix}${table.tableName}($columns, PRIMARY KEY($pks));';
 }
 
 List<String> _createReferences(_Table table) {
   final List<String> result = [];
   for (_ForeignKey fk in table.foreignKeys) {
-    result.add('ALTER TABLE ${table.tableName} '
+    result.add('ALTER TABLE \${schemaPrefix}${table.tableName} '
         'ADD CONSTRAINT ${fk.name} '
         'FOREIGN KEY (${fk.sourceColumns.join(', ')}) '
         'REFERENCES ${fk.table} (${fk.targetColumns.join(', ')})'

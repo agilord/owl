@@ -19,12 +19,18 @@ import 'package:owl/util/sql/postgresql.dart' as _owl_sql_pg;
 // ignore: unused_import, library_prefixes
 import 'package:postgresql/postgresql.dart' as pg;
 
-/// DDL statements.
-final List<String> sqlCrudExampleDdl = <String>[
-  """CREATE TABLE IF NOT EXISTS my_custom_entity(entity_id INTEGER, ts TIMESTAMP, some_other_column TEXT, external_id UUID, version INTEGER, PRIMARY KEY(entity_id));""",
-  """CREATE TABLE IF NOT EXISTS entity_detail(entity_id INTEGER, detail_id INTEGER, is_active BOOLEAN, PRIMARY KEY(entity_id, detail_id));""",
-  """ALTER TABLE entity_detail ADD CONSTRAINT fk_entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
-];
+/// DDL statements for the default schema.
+final List<String> sqlCrudExampleDdl = getSqlCrudExampleDdl();
+
+/// DDL statements for a given schema.
+List<String> getSqlCrudExampleDdl({String schema}) {
+  final String schemaPrefix = schema == null ? '' : schema + '.';
+  return <String>[
+    """CREATE TABLE IF NOT EXISTS ${schemaPrefix}my_custom_entity(entity_id INTEGER, ts TIMESTAMP, some_other_column TEXT, external_id UUID, version INTEGER, PRIMARY KEY(entity_id));""",
+    """CREATE TABLE IF NOT EXISTS ${schemaPrefix}entity_detail(entity_id INTEGER, detail_id INTEGER, is_active BOOLEAN, PRIMARY KEY(entity_id, detail_id));""",
+    """ALTER TABLE ${schemaPrefix}entity_detail ADD CONSTRAINT fk_entity_detail__entityId__my_custom_entity FOREIGN KEY (entity_id) REFERENCES my_custom_entity (entity_id);"""
+  ];
+}
 
 // **************************************************************************
 // Generator: PostgresSqlGenerator
