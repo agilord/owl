@@ -1,5 +1,7 @@
 # Changelog
 
+# 0.2.1
+
 - Added missing SQL type mapping.
 - Add support for table name overrides (both for CRUD and for DDL).
 

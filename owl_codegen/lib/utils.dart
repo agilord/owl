@@ -7,7 +7,7 @@ import 'package:build/build.dart' show BuildStep;
 // ignore: implementation_imports
 import 'package:source_gen/src/annotation.dart' show matchAnnotation;
 
-const _owlVersion = '0.2.0';
+const _owlVersion = '0.2.1';
 
 /// Whether the AST [element] has an [annotation] on it.
 bool hasAnnotation(Element element, Type annotation) =>
