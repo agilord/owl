@@ -1,5 +1,7 @@
 # Changelog
 
+- Added missing SQL type mapping.
+
 # 0.2.0
 
 - Added support for Postgresql schema prefixes (both for CRUD and for DDL).

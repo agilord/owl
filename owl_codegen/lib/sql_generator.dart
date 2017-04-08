@@ -287,16 +287,29 @@ _Column _parseField(FieldElement field) {
 }
 
 Map<SqlType, String> _resolvedSqlTypes = {
+  SqlType.bool: 'BOOLEAN',
+  SqlType.date: 'DATE',
+  SqlType.int16: 'SMALLINT',
   SqlType.int32: 'INTEGER',
   SqlType.int64: 'BIGINT',
+  SqlType.float32: 'REAL',
+  SqlType.float64: 'DOUBLE PRECISION',
+  SqlType.json: 'JSON',
+  SqlType.jsonb: 'JSONB',
+  SqlType.serial32: 'SERIAL',
+  SqlType.serial64: 'BIGSERIAL',
+  SqlType.text: 'TEXT',
+  SqlType.timestamp: 'TIMESTAMP WITH TIME ZONE',
   SqlType.uuid: 'UUID',
 };
 
 Map<String, String> _resolvedDartTypes = {
   'int': 'INTEGER',
   'bool': 'BOOLEAN',
+  'double': 'DOUBLE PRECISION',
   'String': 'TEXT',
-  'DateTime': 'TIMESTAMP'
+  'DateTime': 'TIMESTAMP WITH TIME ZONE',
+  'Map': 'JSONB',
 };
 
 _ForeignKey _parseForeignKey(String tableName, FieldElement field,

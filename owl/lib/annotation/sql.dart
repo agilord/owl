@@ -76,6 +76,9 @@ enum SqlType {
   /// Boolean.
   bool,
 
+  /// Date (year, month, day).
+  date,
+
   /// 16-bit (2-byte) integer.
   int16,
 
@@ -90,6 +93,12 @@ enum SqlType {
 
   /// 64-bit (8-byte) floating point value.
   float64,
+
+  /// JSON.
+  json,
+
+  /// JSONB.
+  jsonb,
 
   /// Autoincrementing 32-bit (4-byte) integer.
   serial32,
