@@ -29,35 +29,55 @@ class PostgresSqlGenerator extends Generator {
       'pg': 'package:postgresql/postgresql.dart'
     });
     if (libBlock != null) {
-      final List<String> sqls = [];
-      final List<_Table> tables =
-          listClasses(element, SqlTable).map(_parseClass).toList();
-      for (_Table table in tables) {
-        sqls.add(_createTable(table));
-        for (_Column column in table.columns) {
-          sqls.add(_addColumn(table, column));
-        }
-      }
-      for (_Table table in tables) {
-        sqls.addAll(_createReferences(table));
-      }
+      final List<_Table> tables = listClasses(element, SqlTable)
+          .map(_parseClass)
+          .toList()..sort((t1, t2) => t1.tableName.compareTo(t2.tableName));
       final sqlVarName =
           new Id(buildStep.inputId.path.split('/').last.split('.').first).camel;
-      final sqlFnName =
+      final sqlPackageName =
           new Id(buildStep.inputId.path.split('/').last.split('.').first)
               .capCamel;
 
       final sqlVarBlock = '\n/// DDL statements for the default schema.\n'
-          '@Deprecated(\'Use get${sqlFnName}Ddl() instead.\')'
-          'final List<String> ${sqlVarName}Ddl = get${sqlFnName}Ddl();\n';
+          '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
+          'final List<String> ${sqlVarName}Ddl = ${sqlPackageName}Ddl.getDdls();\n';
 
       final sqlFnBlock = '\n/// DDL statements for a given schema.\n'
-          'List<String> get${sqlFnName}Ddl({String schema}) {\n'
-          '  final String schemaPrefix = schema == null ? \'\': schema + \'.\';\n'
-          '  return <String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n'
-          '}';
+          '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
+          'List<String> get${sqlPackageName}Ddl({String schema}) =>\n'
+          '${sqlPackageName}Ddl.getDdls(schema: schema);';
 
-      return '$libBlock\n$sqlVarBlock\n$sqlFnBlock\n';
+      final String tableAddAll = tables
+          .map((t) => t.className)
+          .map((cn) => 'results.addAll(get${cn}Ddls(schema: schema));\n')
+          .join();
+
+      final String tableDdlFns = tables.map((t) {
+        final List<String> sqls = [];
+        sqls.add(_createTable(t));
+        for (_Column column in t.columns) {
+          sqls.add(_addColumn(t, column));
+        }
+        return '\n/// DDL statements for a ${t.tableName}.\n'
+            'static List<String> get${t.className}Ddls({String schema, String table}) {\n'
+            '  final String schemaPrefix = schema == null ? \'\': schema + \'.\';\n'
+            '  final String tableName = table ?? \'${t.tableName}\';\n'
+            '  final String fqtn = \'\$schemaPrefix\$tableName\';\n'
+            '  return <String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n'
+            '}';
+      }).join('\n');
+
+      final ddlBlock = '\n/// DDL statements.\n'
+          'abstract class ${sqlPackageName}Ddl {\n'
+          '  static List<String> getDdls({String schema}) {'
+          '    final List<String> results = <String>[];\n'
+          '    $tableAddAll'
+          '    return results;\n'
+          '  }'
+          '  $tableDdlFns\n'
+          '}\n';
+
+      return '$libBlock\n$sqlVarBlock\n$sqlFnBlock\n$ddlBlock\n';
     }
     if (element is ClassElement && hasAnnotation(element, SqlTable)) {
       final _Table table = _parseClass(element);
@@ -130,7 +150,8 @@ class PostgresSqlGenerator extends Generator {
       code += '/// Insert a row into ${table.tableName}.\n';
       code += 'static Future<int> create(pg.Connection connection, '
           '${element.name} $varName, '
-          '{String schema, List<String> clear, bool strict: true, bool ifNotExists: false}) async {';
+          '{String schema, String table, List<String> clear, '
+          'bool strict: true, bool ifNotExists: false,}) async {';
       code += 'if (ifNotExists) {\n';
 
       code += '  final ${element.name} _x = await read(connection, '
@@ -139,7 +160,7 @@ class PostgresSqlGenerator extends Generator {
       code += '  if (_x != null) return 0;';
       code += '}\n';
       code += 'return await new $_crudPgAlias.SimpleCreate(schema: schema, '
-          'table: \'${table.tableName}\', '
+          'table: table ?? \'${table.tableName}\', '
           'set: map($varName), clear: clear)'
           '.execute(connection, strict: strict);';
       code += '}\n';
@@ -149,12 +170,13 @@ class PostgresSqlGenerator extends Generator {
       code += 'static Future<${element.name}> read('
           'pg.Connection connection, '
           '$pkFnParams, '
-          '{String schema, List<String> columns, bool forUpdate: false, bool strict: true}) async {\n';
+          '{String schema, String table, List<String> columns, '
+          'bool forUpdate: false, bool strict: true,}) async {\n';
       for (_Column c in pks) {
         code += 'assert(${c.field} != null);\n';
       }
       code += 'final pg.Row _row = await new $_crudPgAlias.SimpleSelect('
-          'schema: schema, table: \'${table.tableName}\', columns: columns,';
+          'schema: schema, table: table ?? \'${table.tableName}\', columns: columns,';
       code += 'where: <String, dynamic>{$pkWhere},';
       code += 'limit: (strict ? 2:1), '
           'forUpdate: forUpdate).get(connection, strict: strict);';
@@ -165,12 +187,12 @@ class PostgresSqlGenerator extends Generator {
       code += '/// Update a row in ${table.tableName}.\n';
       code += 'static Future<int> update('
           'pg.Connection connection, '
-          '${element.name} $varName, {String schema, ';
+          '${element.name} $varName, {String schema, String table, ';
       if (vks.isNotEmpty) {
         code += '\n// ignore: parameter_assignments\n';
       }
       code +=
-          '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true}) async {';
+          '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true,}) async {';
       if (autoVersion) {
         code += 'if (autoVersion) {';
         code += 'assert(${vks.first.field} == null);';
@@ -187,7 +209,7 @@ class PostgresSqlGenerator extends Generator {
       }
       code += '};';
       code += 'return await new $_crudPgAlias.SimpleUpdate('
-          'schema: schema, table: \'${table.tableName}\', '
+          'schema: schema, table: table ?? \'${table.tableName}\', '
           'set: _set, clear: clear, where: _where)'
           '.execute(connection, strict: strict);';
       code += '}\n';
@@ -197,12 +219,12 @@ class PostgresSqlGenerator extends Generator {
       code += 'static Future<int> delete('
           'pg.Connection connection, '
           '$pkFnParams, '
-          '{String schema, ${vkFnParams}bool strict: true}) async {';
+          '{String schema, String table, ${vkFnParams}bool strict: true,}) async {';
       for (_Column c in pks) {
         code += 'assert(${c.field} != null);\n';
       }
       code += 'return await new $_crudPgAlias.SimpleDelete('
-          'schema: schema, table: \'${table.tableName}\', '
+          'schema: schema, table: table ?? \'${table.tableName}\', '
           'where: <String, dynamic>{$allWhere}).execute(connection, strict: strict);';
       code += '}\n';
 
@@ -374,7 +396,7 @@ String _createTable(_Table table) {
   final String columns =
       table.columns.map((c) => '${c.columnName} ${c.resolvedType}').join(', ');
   final String pks = table.primaryKeys.map((c) => c.columnName).join(', ');
-  return 'CREATE TABLE IF NOT EXISTS \${schemaPrefix}${table.tableName}($columns, PRIMARY KEY($pks));';
+  return 'CREATE TABLE IF NOT EXISTS \$fqtn($columns, PRIMARY KEY($pks));';
 }
 
 String _addColumn(_Table table, _Column column) {
@@ -383,14 +405,14 @@ String _addColumn(_Table table, _Column column) {
 //  if (column.isPrimaryKey) {
 //    constraints.add('PRIMARY KEY');
 //  }
-  return 'ALTER TABLE \${schemaPrefix}${table.tableName} '
+  return 'ALTER TABLE \$fqtn '
       'ADD COLUMN IF NOT EXISTS ${column.columnName} ${column.resolvedType} ${constraints.join(' ')};';
 }
 
 List<String> _createReferences(_Table table) {
   final List<String> result = [];
   for (_ForeignKey fk in table.foreignKeys) {
-    result.add('ALTER TABLE \${schemaPrefix}${table.tableName} '
+    result.add('ALTER TABLE \$fqtn '
         'ADD CONSTRAINT ${fk.name} '
         'FOREIGN KEY (${fk.sourceColumns.join(', ')}) '
         'REFERENCES ${fk.table} (${fk.targetColumns.join(', ')})'
