@@ -69,6 +69,7 @@ class PostgresSqlGenerator extends Generator {
 
       final ddlBlock = '\n/// DDL statements.\n'
           'abstract class ${sqlPackageName}Ddl {\n'
+          '  /// DDL statements for a given schema.\n'
           '  static List<String> getDdls({String schema}) {'
           '    final List<String> results = <String>[];\n'
           '    $tableAddAll'
@@ -188,14 +189,12 @@ class PostgresSqlGenerator extends Generator {
       code += 'static Future<int> update('
           'pg.Connection connection, '
           '${element.name} $varName, {String schema, String table, ';
-      if (vks.isNotEmpty) {
-        code += '\n// ignore: parameter_assignments\n';
-      }
       code +=
           '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true,}) async {';
       if (autoVersion) {
         code += 'if (autoVersion) {';
-        code += 'assert(${vks.first.field} == null);';
+        code += 'assert(${vks.first.field} == null);\n';
+        code += '  // ignore: parameter_assignments\n';
         code += '  ${vks.first.field} = $varName.${vks.first.field}++;';
         code += '}\n';
       }
