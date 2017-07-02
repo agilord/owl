@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.2.1+1
+
+- Bugfix in SQL: Table.create's `ifNotExists` should propagate `schema` and `table`.
+
 # 0.2.1
 
 - Added missing SQL type mapping.

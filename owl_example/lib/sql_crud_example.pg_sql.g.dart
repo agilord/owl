@@ -131,8 +131,8 @@ abstract class MyCustomEntityTable {
     bool ifNotExists: false,
   }) async {
     if (ifNotExists) {
-      final EntityMain _x =
-          await read(connection, entityMain.entityId, strict: false);
+      final EntityMain _x = await read(connection, entityMain.entityId,
+          strict: false, schema: schema, table: table);
       if (_x != null) return 0;
     }
     return await new _owl_sql_pg.SimpleCreate(
@@ -268,7 +268,7 @@ abstract class EntityDetailTable {
     if (ifNotExists) {
       final EntityDetail _x = await read(
           connection, entityDetail.entityId, entityDetail.detailId,
-          strict: false);
+          strict: false, schema: schema, table: table);
       if (_x != null) return 0;
     }
     return await new _owl_sql_pg.SimpleCreate(

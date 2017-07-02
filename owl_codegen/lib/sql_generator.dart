@@ -157,7 +157,7 @@ class PostgresSqlGenerator extends Generator {
 
       code += '  final ${element.name} _x = await read(connection, '
           '${pks.map((c) => '$varName.${c.field}, ').join()}'
-          ' strict: false);';
+          ' strict: false, schema: schema, table: table);';
       code += '  if (_x != null) return 0;';
       code += '}\n';
       code += 'return await new $_crudPgAlias.SimpleCreate(schema: schema, '
