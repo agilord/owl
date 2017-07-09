@@ -12,7 +12,9 @@ environment:
 dependencies:
   owl: ^0.2.1
     # path: '../owl'
+  analyzer: ^0.29.10
   args: ^0.13.7
+  build: ^0.7.2
   build_runner: ^0.3.0
   id: ^1.0.1
   source_gen: ^0.5.4
