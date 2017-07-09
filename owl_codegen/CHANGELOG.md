@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.2.1+2
+
+- Bugfix: exclude final or setter-only fields (e.g. hashCode).
+
 # 0.2.1+1
 
 - Bugfix in SQL: Table.create's `ifNotExists` should propagate `schema` and `table`.

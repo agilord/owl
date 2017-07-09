@@ -46,4 +46,16 @@ class EntityDetail {
 
   ///
   bool isActive;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EntityDetail &&
+          runtimeType == other.runtimeType &&
+          entityId == other.entityId &&
+          detailId == other.detailId &&
+          isActive == other.isActive;
+
+  @override
+  int get hashCode => entityId.hashCode ^ detailId.hashCode ^ isActive.hashCode;
 }

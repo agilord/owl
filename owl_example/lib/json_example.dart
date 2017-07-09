@@ -53,6 +53,31 @@ class ChildClass {
   @Transient()
   int transientField;
 
+  ///
   @JsonField(native: true)
   Map map;
+}
+
+///
+@JsonClass()
+class WithEqualsAndHash {
+  ///
+  int id;
+
+  ///
+  String text;
+
+  ///
+  WithEqualsAndHash({this.id, this.text});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WithEqualsAndHash &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          text == other.text;
+
+  @override
+  int get hashCode => id.hashCode ^ text.hashCode;
 }

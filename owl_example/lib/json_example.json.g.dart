@@ -122,3 +122,42 @@ abstract class ChildClassMapper {
     return JSON.encoder.convert(map(object));
   }
 }
+
+// **************************************************************************
+// Generator: JsonGenerator
+// Target: class WithEqualsAndHash
+// **************************************************************************
+
+/// Mapper for WithEqualsAndHash
+abstract class WithEqualsAndHashMapper {
+  /// Converts an instance of WithEqualsAndHash to Map.
+  static Map<String, dynamic> map(WithEqualsAndHash object) {
+    if (object == null) return null;
+    return (new _owl_json.MapBuilder(ordered: false)
+          ..put('id', object.id)
+          ..put('text', object.text))
+        .toMap();
+  }
+
+  /// Converts a Map to an instance of WithEqualsAndHash.
+  static WithEqualsAndHash parse(Map<String, dynamic> map) {
+    if (map == null) return null;
+    final WithEqualsAndHash object = new WithEqualsAndHash();
+    object.id = map['id'];
+    object.text = map['text'];
+    return object;
+  }
+
+  /// Converts a JSON string to an instance of WithEqualsAndHash.
+  static WithEqualsAndHash fromJson(String json) {
+    if (json == null || json.isEmpty) return null;
+    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    return parse(map);
+  }
+
+  /// Converts an instance of WithEqualsAndHash to JSON string.
+  static String toJson(WithEqualsAndHash object) {
+    if (object == null) return null;
+    return JSON.encoder.convert(map(object));
+  }
+}

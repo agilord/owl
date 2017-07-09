@@ -263,6 +263,7 @@ _Table _parseClass(ClassElement element, {bool skipReferences: false}) {
 
 _Column _parseField(FieldElement field) {
   if (hasAnnotation(field, Transient)) return null;
+  if (field.getter == null || field.setter == null) return null;
   final sqlColumn = getAnnotation(field, SqlColumn);
   final column = new _Column()..field = field.name;
 

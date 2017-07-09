@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:analyzer/dart/element/element.dart';
-import 'package:build/build.dart';
+//import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'package:owl/annotation/json.dart';
@@ -146,6 +146,7 @@ class _Field {
 
   static _Field parse(FieldElement elem) {
     if (hasAnnotation(elem, Transient)) return null;
+    if (elem.getter == null || elem.setter == null) return null;
     return new _Field.fromElement(elem);
   }
 }
