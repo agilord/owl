@@ -24,8 +24,8 @@ Future<HttpRequest> callHttpServer(String method, String path,
   request.onError.first.then((event) {
     if (!c.isCompleted) c.completeError(event);
   });
-  if (body != null) {
-    request.send(body);
-  }
+
+  request.send(body);
+
   return c.future;
 }
