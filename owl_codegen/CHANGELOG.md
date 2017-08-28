@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.2.2
+
+- Upgrade dependencies (`build`, `build_runner` and `source_gen`).
+
 # 0.2.1+2
 
 - Bugfix: exclude final or setter-only fields (e.g. hashCode).

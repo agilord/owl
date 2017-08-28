@@ -19,218 +19,236 @@ final String _crudPgAlias = '_owl_sql_pg';
 /// Generator class for mapping (JSON-ish serialization).
 class PostgresSqlGenerator extends Generator {
   @override
-  Future<String> generate(Element element, BuildStep buildStep) async {
-    final String libBlock =
-        handleIfLibrary(buildStep, element, SqlTable, libraries: [
-      'dart:async'
-    ], aliasedLibraries: {
-      _coreAlias: 'package:owl/util/json/core.dart',
-      _crudPgAlias: 'package:owl/util/sql/postgresql.dart',
-      'pg': 'package:postgresql/postgresql.dart'
-    });
-    if (libBlock != null) {
-      final List<_Table> tables = listClasses(element, SqlTable)
-          .map(_parseClass)
-          .toList()..sort((t1, t2) => t1.tableName.compareTo(t2.tableName));
-      final sqlVarName =
-          new Id(buildStep.inputId.path.split('/').last.split('.').first).camel;
-      final sqlPackageName =
-          new Id(buildStep.inputId.path.split('/').last.split('.').first)
-              .capCamel;
+  FutureOr<String> generate(LibraryReader library, BuildStep buildStep) {
+    List<AnnotatedElement> elements =
+        library.annotatedWith(new TypeChecker.fromRuntime(SqlTable)).toList();
+    if (elements.isEmpty) return null;
+    List<String> blocks = [];
+    blocks.add(generateImportBlock(
+      buildStep,
+      libraries: ['dart:async'],
+      aliasedLibraries: {
+        _coreAlias: 'package:owl/util/json/core.dart',
+        _crudPgAlias: 'package:owl/util/sql/postgresql.dart',
+        'pg': 'package:postgresql/postgresql.dart',
+      },
+    ));
 
-      final sqlVarBlock = '\n/// DDL statements for the default schema.\n'
-          '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
-          'final List<String> ${sqlVarName}Ddl = ${sqlPackageName}Ddl.getDdls();\n';
+    blocks.add(_generateLib(elements, buildStep));
 
-      final sqlFnBlock = '\n/// DDL statements for a given schema.\n'
-          '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
-          'List<String> get${sqlPackageName}Ddl({String schema}) =>\n'
-          '${sqlPackageName}Ddl.getDdls(schema: schema);';
-
-      final String tableAddAll = tables
-          .map((t) => t.className)
-          .map((cn) => 'results.addAll(get${cn}Ddls(schema: schema));\n')
-          .join();
-
-      final String tableDdlFns = tables.map((t) {
-        final List<String> sqls = [];
-        sqls.add(_createTable(t));
-        for (_Column column in t.columns) {
-          sqls.add(_addColumn(t, column));
-        }
-        return '\n/// DDL statements for a ${t.tableName}.\n'
-            'static List<String> get${t.className}Ddls({String schema, String table}) {\n'
-            '  final String schemaPrefix = schema == null ? \'\': schema + \'.\';\n'
-            '  final String tableName = table ?? \'${t.tableName}\';\n'
-            '  final String fqtn = \'\$schemaPrefix\$tableName\';\n'
-            '  return <String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n'
-            '}';
-      }).join('\n');
-
-      final ddlBlock = '\n/// DDL statements.\n'
-          'abstract class ${sqlPackageName}Ddl {\n'
-          '  /// DDL statements for a given schema.\n'
-          '  static List<String> getDdls({String schema}) {'
-          '    final List<String> results = <String>[];\n'
-          '    $tableAddAll'
-          '    return results;\n'
-          '  }'
-          '  $tableDdlFns\n'
-          '}\n';
-
-      return '$libBlock\n$sqlVarBlock\n$sqlFnBlock\n$ddlBlock\n';
+    for (var ae in elements) {
+      if (ae.element is ClassElement) {
+        blocks.add(_generate(ae.element, buildStep));
+      }
     }
-    if (element is ClassElement && hasAnnotation(element, SqlTable)) {
-      final _Table table = _parseClass(element);
-      String code = '/// CRUD methods for table: ${table.tableName}\n';
-      code += 'abstract class ${table.className} {';
-      // basic names
-      code += '/// table: ${table.tableName}\n';
-      code += '/// ignore: constant_identifier_names\n';
+
+    return blocks.join('\n');
+  }
+
+  String _generateLib(List<AnnotatedElement> elements, BuildStep buildStep) {
+    final List<_Table> tables = elements
+        .map((ae) => ae.element)
+        .where((e) => e is ClassElement)
+        .map((e) => _parseClass(e))
+        .toList()
+          ..sort((t1, t2) => t1.tableName.compareTo(t2.tableName));
+    final sqlVarName =
+        new Id(buildStep.inputId.path.split('/').last.split('.').first).camel;
+    final sqlPackageName =
+        new Id(buildStep.inputId.path.split('/').last.split('.').first)
+            .capCamel;
+
+    final sqlVarBlock = '\n/// DDL statements for the default schema.\n'
+        '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
+        'final List<String> ${sqlVarName}Ddl = ${sqlPackageName}Ddl.getDdls();\n';
+
+    final sqlFnBlock = '\n/// DDL statements for a given schema.\n'
+        '@Deprecated(\'Use ${sqlPackageName}Ddl.getDdls() instead.\')'
+        'List<String> get${sqlPackageName}Ddl({String schema}) =>\n'
+        '${sqlPackageName}Ddl.getDdls(schema: schema);';
+
+    final String tableAddAll = tables
+        .map((t) => t.className)
+        .map((cn) => 'results.addAll(get${cn}Ddls(schema: schema));\n')
+        .join();
+
+    final String tableDdlFns = tables.map((t) {
+      final List<String> sqls = [];
+      sqls.add(_createTable(t));
+      for (_Column column in t.columns) {
+        sqls.add(_addColumn(t, column));
+      }
+      return '\n/// DDL statements for a ${t.tableName}.\n'
+          'static List<String> get${t.className}Ddls({String schema, String table}) {\n'
+          '  final String schemaPrefix = schema == null ? \'\': schema + \'.\';\n'
+          '  final String tableName = table ?? \'${t.tableName}\';\n'
+          '  final String fqtn = \'\$schemaPrefix\$tableName\';\n'
+          '  return <String>[${sqls.map((sql) => '"""$sql"""').join(', ')}];\n'
+          '}';
+    }).join('\n');
+
+    final ddlBlock = '\n/// DDL statements.\n'
+        'abstract class ${sqlPackageName}Ddl {\n'
+        '  /// DDL statements for a given schema.\n'
+        '  static List<String> getDdls({String schema}) {'
+        '    final List<String> results = <String>[];\n'
+        '    $tableAddAll'
+        '    return results;\n'
+        '  }'
+        '  $tableDdlFns\n'
+        '}\n';
+
+    return '$sqlVarBlock\n$sqlFnBlock\n$ddlBlock\n';
+  }
+
+  String _generate(ClassElement element, BuildStep buildStep) {
+    final _Table table = _parseClass(element);
+    String code = '/// CRUD methods for table: ${table.tableName}\n';
+    code += 'abstract class ${table.className} {';
+    // basic names
+    code += '/// table: ${table.tableName}\n';
+    code += '/// ignore: constant_identifier_names\n';
+    code +=
+        'static const String ${table.tableName.toUpperCase()} = \'${table.tableName}\';\n';
+    for (var column in table.columns) {
+      code += '/// column: ${column.columnName}\n';
       code +=
-          'static const String ${table.tableName.toUpperCase()} = \'${table.tableName}\';\n';
-      for (var column in table.columns) {
-        code += '/// column: ${column.columnName}\n';
-        code +=
-            'static const String ${column.field} = \'${column.columnName}\';\n';
-      }
-
-      // parseRow
-      code += '/// Convert database row to object.\n';
-      code += 'static ${element.name} parseRow(pg.Row row) {\n';
-      code += '  if (row == null) return null;\n';
-      code += '  // ignore: always_specify_types\n';
-      code += '  final Map map = row.toMap();\n';
-      code += '  final ${element.name} object = new ${element.name}();\n';
-      for (var column in table.columns) {
-        String parse;
-        if (column.parserFn != null) {
-          parse = "${column.parserFn}(map['${column.columnName}'])";
-        } else {
-          parse = 'map[\'${column.columnName}\']';
-        }
-        code += 'object.${column.field} = $parse;\n';
-      }
-      code += '  return object;\n';
-      code += '}\n';
-
-      // map
-      code += '/// Convert object to Map.\n';
-      code += 'static Map<String, dynamic> map(${element.name} object) {\n';
-      code += '  if (object == null) return null;';
-      code += '  return <String, dynamic>{';
-      for (var column in table.columns) {
-        String mapper;
-        if (column.mapperFn != null) {
-          mapper = '${column.mapperFn}(object.${column.field})';
-        } else {
-          mapper = 'object.${column.field}';
-        }
-        code += '\'${column.columnName}\': $mapper,';
-      }
-      code += '  };';
-      code += '}\n';
-
-      final varName = new Id.fromCamels(element.name).camel;
-      final pks = table.primaryKeys;
-      final vks = table.versionKeys;
-      final String pkFnParams =
-          pks.map((c) => '${c.dartType} ${c.field}').join(', ');
-      final String vkFnParams =
-          vks.map((c) => '${c.dartType} ${c.field}, ').join();
-      final String pkWhere =
-          pks.map((c) => '\'${c.columnName}\': ${c.field}').join(', ');
-      final String allWhere = table.allKeys
-          .map((c) => '\'${c.columnName}\': ${c.field}')
-          .join(', ');
-      final bool autoVersion = (vks.length == 1) && vks.first.dartType == 'int';
-      final String autoVersionFnParam =
-          autoVersion ? 'bool autoVersion: false, ' : '';
-
-      // create
-      code += '/// Insert a row into ${table.tableName}.\n';
-      code += 'static Future<int> create(pg.Connection connection, '
-          '${element.name} $varName, '
-          '{String schema, String table, List<String> clear, '
-          'bool strict: true, bool ifNotExists: false,}) async {';
-      code += 'if (ifNotExists) {\n';
-
-      code += '  final ${element.name} _x = await read(connection, '
-          '${pks.map((c) => '$varName.${c.field}, ').join()}'
-          ' strict: false, schema: schema, table: table);';
-      code += '  if (_x != null) return 0;';
-      code += '}\n';
-      code += 'return await new $_crudPgAlias.SimpleCreate(schema: schema, '
-          'table: table ?? \'${table.tableName}\', '
-          'set: map($varName), clear: clear)'
-          '.execute(connection, strict: strict);';
-      code += '}\n';
-
-      // read
-      code += '/// Read a row from ${table.tableName}.\n';
-      code += 'static Future<${element.name}> read('
-          'pg.Connection connection, '
-          '$pkFnParams, '
-          '{String schema, String table, List<String> columns, '
-          'bool forUpdate: false, bool strict: true,}) async {\n';
-      for (_Column c in pks) {
-        code += 'assert(${c.field} != null);\n';
-      }
-      code += 'final pg.Row _row = await new $_crudPgAlias.SimpleSelect('
-          'schema: schema, table: table ?? \'${table.tableName}\', columns: columns,';
-      code += 'where: <String, dynamic>{$pkWhere},';
-      code += 'limit: (strict ? 2:1), '
-          'forUpdate: forUpdate).get(connection, strict: strict);';
-      code += 'return parseRow(_row);';
-      code += '}';
-
-      // update
-      code += '/// Update a row in ${table.tableName}.\n';
-      code += 'static Future<int> update('
-          'pg.Connection connection, '
-          '${element.name} $varName, {String schema, String table, ';
-      code +=
-          '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true,}) async {';
-      if (autoVersion) {
-        code += 'if (autoVersion) {';
-        code += 'assert(${vks.first.field} == null);\n';
-        code += '  // ignore: parameter_assignments\n';
-        code += '  ${vks.first.field} = $varName.${vks.first.field}++;';
-        code += '}\n';
-      }
-      code += 'final Map<String, dynamic> _set = map($varName);';
-      code += 'final Map<String, dynamic> _where = <String, dynamic>{';
-      for (_Column c in pks) {
-        code += '\'${c.columnName}\': _set.remove(\'${c.columnName}\'),';
-      }
-      for (_Column c in vks) {
-        code += '\'${c.columnName}\': ${c.field},';
-      }
-      code += '};';
-      code += 'return await new $_crudPgAlias.SimpleUpdate('
-          'schema: schema, table: table ?? \'${table.tableName}\', '
-          'set: _set, clear: clear, where: _where)'
-          '.execute(connection, strict: strict);';
-      code += '}\n';
-
-      // delete
-      code += '/// Delete a row from ${table.tableName}.\n';
-      code += 'static Future<int> delete('
-          'pg.Connection connection, '
-          '$pkFnParams, '
-          '{String schema, String table, ${vkFnParams}bool strict: true,}) async {';
-      for (_Column c in pks) {
-        code += 'assert(${c.field} != null);\n';
-      }
-      code += 'return await new $_crudPgAlias.SimpleDelete('
-          'schema: schema, table: table ?? \'${table.tableName}\', '
-          'where: <String, dynamic>{$allWhere}).execute(connection, strict: strict);';
-      code += '}\n';
-
-      code += '}';
-      return code;
+          'static const String ${column.field} = \'${column.columnName}\';\n';
     }
-    return null;
+
+    // parseRow
+    code += '/// Convert database row to object.\n';
+    code += 'static ${element.name} parseRow(pg.Row row) {\n';
+    code += '  if (row == null) return null;\n';
+    code += '  // ignore: always_specify_types\n';
+    code += '  final Map map = row.toMap();\n';
+    code += '  final ${element.name} object = new ${element.name}();\n';
+    for (var column in table.columns) {
+      String parse;
+      if (column.parserFn != null) {
+        parse = "${column.parserFn}(map['${column.columnName}'])";
+      } else {
+        parse = 'map[\'${column.columnName}\']';
+      }
+      code += 'object.${column.field} = $parse;\n';
+    }
+    code += '  return object;\n';
+    code += '}\n';
+
+    // map
+    code += '/// Convert object to Map.\n';
+    code += 'static Map<String, dynamic> map(${element.name} object) {\n';
+    code += '  if (object == null) return null;';
+    code += '  return <String, dynamic>{';
+    for (var column in table.columns) {
+      String mapper;
+      if (column.mapperFn != null) {
+        mapper = '${column.mapperFn}(object.${column.field})';
+      } else {
+        mapper = 'object.${column.field}';
+      }
+      code += '\'${column.columnName}\': $mapper,';
+    }
+    code += '  };';
+    code += '}\n';
+
+    final varName = new Id.fromCamels(element.name).camel;
+    final pks = table.primaryKeys;
+    final vks = table.versionKeys;
+    final String pkFnParams =
+        pks.map((c) => '${c.dartType} ${c.field}').join(', ');
+    final String vkFnParams =
+        vks.map((c) => '${c.dartType} ${c.field}, ').join();
+    final String pkWhere =
+        pks.map((c) => '\'${c.columnName}\': ${c.field}').join(', ');
+    final String allWhere =
+        table.allKeys.map((c) => '\'${c.columnName}\': ${c.field}').join(', ');
+    final bool autoVersion = (vks.length == 1) && vks.first.dartType == 'int';
+    final String autoVersionFnParam =
+        autoVersion ? 'bool autoVersion: false, ' : '';
+
+    // create
+    code += '/// Insert a row into ${table.tableName}.\n';
+    code += 'static Future<int> create(pg.Connection connection, '
+        '${element.name} $varName, '
+        '{String schema, String table, List<String> clear, '
+        'bool strict: true, bool ifNotExists: false,}) async {';
+    code += 'if (ifNotExists) {\n';
+
+    code += '  final ${element.name} _x = await read(connection, '
+        '${pks.map((c) => '$varName.${c.field}, ').join()}'
+        ' strict: false, schema: schema, table: table);';
+    code += '  if (_x != null) return 0;';
+    code += '}\n';
+    code += 'return await new $_crudPgAlias.SimpleCreate(schema: schema, '
+        'table: table ?? \'${table.tableName}\', '
+        'set: map($varName), clear: clear)'
+        '.execute(connection, strict: strict);';
+    code += '}\n';
+
+    // read
+    code += '/// Read a row from ${table.tableName}.\n';
+    code += 'static Future<${element.name}> read('
+        'pg.Connection connection, '
+        '$pkFnParams, '
+        '{String schema, String table, List<String> columns, '
+        'bool forUpdate: false, bool strict: true,}) async {\n';
+    for (_Column c in pks) {
+      code += 'assert(${c.field} != null);\n';
+    }
+    code += 'final pg.Row _row = await new $_crudPgAlias.SimpleSelect('
+        'schema: schema, table: table ?? \'${table.tableName}\', columns: columns,';
+    code += 'where: <String, dynamic>{$pkWhere},';
+    code += 'limit: (strict ? 2:1), '
+        'forUpdate: forUpdate).get(connection, strict: strict);';
+    code += 'return parseRow(_row);';
+    code += '}';
+
+    // update
+    code += '/// Update a row in ${table.tableName}.\n';
+    code += 'static Future<int> update('
+        'pg.Connection connection, '
+        '${element.name} $varName, {String schema, String table, ';
+    code +=
+        '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true,}) async {';
+    if (autoVersion) {
+      code += 'if (autoVersion) {';
+      code += 'assert(${vks.first.field} == null);\n';
+      code += '  // ignore: parameter_assignments\n';
+      code += '  ${vks.first.field} = $varName.${vks.first.field}++;';
+      code += '}\n';
+    }
+    code += 'final Map<String, dynamic> _set = map($varName);';
+    code += 'final Map<String, dynamic> _where = <String, dynamic>{';
+    for (_Column c in pks) {
+      code += '\'${c.columnName}\': _set.remove(\'${c.columnName}\'),';
+    }
+    for (_Column c in vks) {
+      code += '\'${c.columnName}\': ${c.field},';
+    }
+    code += '};';
+    code += 'return await new $_crudPgAlias.SimpleUpdate('
+        'schema: schema, table: table ?? \'${table.tableName}\', '
+        'set: _set, clear: clear, where: _where)'
+        '.execute(connection, strict: strict);';
+    code += '}\n';
+
+    // delete
+    code += '/// Delete a row from ${table.tableName}.\n';
+    code += 'static Future<int> delete('
+        'pg.Connection connection, '
+        '$pkFnParams, '
+        '{String schema, String table, ${vkFnParams}bool strict: true,}) async {';
+    for (_Column c in pks) {
+      code += 'assert(${c.field} != null);\n';
+    }
+    code += 'return await new $_crudPgAlias.SimpleDelete('
+        'schema: schema, table: table ?? \'${table.tableName}\', '
+        'where: <String, dynamic>{$allWhere}).execute(connection, strict: strict);';
+    code += '}\n';
+
+    code += '}';
+    return code;
   }
 }
 
@@ -409,6 +427,7 @@ String _addColumn(_Table table, _Column column) {
       'ADD COLUMN IF NOT EXISTS ${column.columnName} ${column.resolvedType} ${constraints.join(' ')};';
 }
 
+// ignore: unused_element
 List<String> _createReferences(_Table table) {
   final List<String> result = [];
   for (_ForeignKey fk in table.foreignKeys) {

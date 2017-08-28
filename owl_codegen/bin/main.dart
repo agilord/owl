@@ -13,28 +13,40 @@ import 'package:owl_codegen/sql_generator.dart';
 
 Future main(List<String> args) async {
   final Config config = await parseArgs(args);
-  final phases = new PhaseGroup();
+  final List<BuildAction> buildActions = [];
   if (config.type == 'json' || config.type == 'all') {
-    phases.newPhase().addAction(
-        new GeneratorBuilder([new JsonGenerator()],
-            generatedExtension: '.json.g.dart', isStandalone: true),
-        new InputSet(config.package, config.globs));
+    buildActions.add(
+      new BuildAction(
+          new LibraryBuilder(new JsonGenerator(),
+              generatedExtension: '.json.g.dart'),
+          config.package,
+          inputs: config.globs),
+    );
   }
   if (config.type == 'pg_sql' || config.type == 'sql' || config.type == 'all') {
-    phases.newPhase().addAction(
-        new GeneratorBuilder([new PostgresSqlGenerator()],
-            generatedExtension: '.pg_sql.g.dart', isStandalone: true),
-        new InputSet(config.package, config.globs));
+    buildActions.add(
+      new BuildAction(
+          new LibraryBuilder(new PostgresSqlGenerator(),
+              generatedExtension: '.pg_sql.g.dart'),
+          config.package,
+          inputs: config.globs),
+    );
   }
   if (config.type == 'http' || config.type == 'all') {
-    phases.newPhase().addAction(
-        new GeneratorBuilder([new HttpWebappClientGenerator()],
-            generatedExtension: '.http_webapp.g.dart', isStandalone: true),
-        new InputSet(config.package, config.globs));
-    phases.newPhase().addAction(
-        new GeneratorBuilder([new HttpServerGenerator()],
-            generatedExtension: '.http_server.g.dart', isStandalone: true),
-        new InputSet(config.package, config.globs));
+    buildActions.add(
+      new BuildAction(
+          new LibraryBuilder(new HttpWebappClientGenerator(),
+              generatedExtension: '.http_webapp.g.dart'),
+          config.package,
+          inputs: config.globs),
+    );
+    buildActions.add(
+      new BuildAction(
+          new LibraryBuilder(new HttpServerGenerator(),
+              generatedExtension: '.http_server.g.dart'),
+          config.package,
+          inputs: config.globs),
+    );
   }
-  await build(phases, deleteFilesByDefault: true);
+  await build(buildActions, deleteFilesByDefault: true);
 }

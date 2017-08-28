@@ -18,215 +18,233 @@ final String _webappAlias = '_owl';
 /// HTTP webapp client generator.
 class HttpWebappClientGenerator extends Generator {
   @override
-  Future<String> generate(Element element, BuildStep buildStep) async {
-    final String libBlock = handleIfLibrary(buildStep, element, HttpApi,
-        libraries: ['dart:async', _jsonMapping(buildStep)],
-        aliasedLibraries: {_webappAlias: 'package:owl/util/http/webapp.dart'});
-    if (libBlock != null) {
-      return '$libBlock\nimport \'dart:html\' show HttpRequest;\n';
-    }
-    if (element is ClassElement && hasAnnotation(element, HttpApi)) {
-      final _Api api = _parse(element);
-      // interface
-      String code = '/// API client interface of ${api.service}.\n';
-      code += 'abstract class ${api.service}Client {';
-      for (_Function fn in api.functions) {
-        code += '/// ${fn.method} ${fn.path.path}\n';
-        code +=
-            'Future<${fn.response}> ${fn.name}(${fn.fnParams.join(', ')});\n';
+  FutureOr<String> generate(LibraryReader library, BuildStep buildStep) {
+    List<AnnotatedElement> elements =
+        library.annotatedWith(new TypeChecker.fromRuntime(HttpApi)).toList();
+    if (elements.isEmpty) return null;
+    List<String> blocks = [];
+    blocks.add(generateImportBlock(
+      buildStep,
+      libraries: ['dart:async', _jsonMapping(buildStep)],
+      aliasedLibraries: {_webappAlias: 'package:owl/util/http/webapp.dart'},
+    ));
+    blocks.add('import \'dart:html\' show HttpRequest;');
+
+    for (var ae in elements) {
+      if (ae.element is ClassElement) {
+        blocks.add(_generate(ae.element, buildStep));
       }
-      code += '}';
+    }
 
-      // implementation
-      code += '/// API client implementation of ${api.service}.\n';
-      code +=
-          'class ${api.service}ClientImpl implements ${api.service}Client {';
-      code += '/// Returns the request headers to set on the request.\n';
-      code +=
-          '/// Signature: Map<String, String> headerCallback(String functionName)\n';
-      code += '$_webappAlias.HeaderCallback headerCallback;';
-      for (_Function fn in api.functions) {
-        code += '/// ${fn.method} ${fn.path.path}\n';
-        code += '@override\n';
-        code +=
-            'Future<${fn.response}> ${fn.name}(${fn.fnParams.join(', ')}) async {\n';
-        code +=
-            '  final Map<String, String> _headers = headerCallback == null ? null : headerCallback(\'${fn.name}\');\n';
-        if (fn.request != null) {}
-        code +=
-            '  final HttpRequest _r = await $_webappAlias.callHttpServer(\n';
-        String path = fn.path.simplePath;
-        for (String fnParam in fn.path.paramNames) {
-          path = path.replaceFirst('{}', '\${$fnParam}');
-        }
-        code += '    \'${fn.method}\', ';
-        code += '    // ignore: unnecessary_brace_in_string_interp\n';
-        code += '\'$path\', headers: _headers';
-        if (fn.request != null) {
-          switch (fn.request) {
-            case 'String':
-              code += ', body: ${fn.requestVar}';
-              break;
-            case 'int':
-              code += ', body: \'\$${fn.requestVar}\'';
-              break;
-            default:
-              code += ', body: ${fn.request}Mapper.toJson(${fn.requestVar})';
-              break;
-          }
-        }
-        code += ');\n';
+    return blocks.join('\n');
+  }
 
-        switch (fn.response) {
+  String _generate(ClassElement element, BuildStep buildStep) {
+    final _Api api = _parse(element);
+    // interface
+    String code = '/// API client interface of ${api.service}.\n';
+    code += 'abstract class ${api.service}Client {';
+    for (_Function fn in api.functions) {
+      code += '/// ${fn.method} ${fn.path.path}\n';
+      code += 'Future<${fn.response}> ${fn.name}(${fn.fnParams.join(', ')});\n';
+    }
+    code += '}';
+
+    // implementation
+    code += '/// API client implementation of ${api.service}.\n';
+    code += 'class ${api.service}ClientImpl implements ${api.service}Client {';
+    code += '/// Returns the request headers to set on the request.\n';
+    code +=
+        '/// Signature: Map<String, String> headerCallback(String functionName)\n';
+    code += '$_webappAlias.HeaderCallback headerCallback;';
+    for (_Function fn in api.functions) {
+      code += '/// ${fn.method} ${fn.path.path}\n';
+      code += '@override\n';
+      code +=
+          'Future<${fn.response}> ${fn.name}(${fn.fnParams.join(', ')}) async {\n';
+      code +=
+          '  final Map<String, String> _headers = headerCallback == null ? null : headerCallback(\'${fn.name}\');\n';
+      if (fn.request != null) {}
+      code += '  final HttpRequest _r = await $_webappAlias.callHttpServer(\n';
+      String path = fn.path.simplePath;
+      for (String fnParam in fn.path.paramNames) {
+        path = path.replaceFirst('{}', '\${$fnParam}');
+      }
+      code += '    \'${fn.method}\', ';
+      code += '    // ignore: unnecessary_brace_in_string_interp\n';
+      code += '\'$path\', headers: _headers';
+      if (fn.request != null) {
+        switch (fn.request) {
           case 'String':
-            code += 'return _r.responseText;\n';
+            code += ', body: ${fn.requestVar}';
+            break;
+          case 'int':
+            code += ', body: \'\$${fn.requestVar}\'';
             break;
           default:
-            code += 'return ${fn.response}Mapper.fromJson(_r.responseText);\n';
+            code += ', body: ${fn.request}Mapper.toJson(${fn.requestVar})';
             break;
         }
-
-        code += '}\n';
       }
-      code += '}';
-      return code;
+      code += ');\n';
+
+      switch (fn.response) {
+        case 'String':
+          code += 'return _r.responseText;\n';
+          break;
+        default:
+          code += 'return ${fn.response}Mapper.fromJson(_r.responseText);\n';
+          break;
+      }
+
+      code += '}\n';
     }
-    return null;
+    code += '}';
+    return code;
   }
 }
 
 /// HTTP server handler generator.
 class HttpServerGenerator extends Generator {
   @override
-  Future<String> generate(Element element, BuildStep buildStep) async {
-    final String libBlock = handleIfLibrary(buildStep, element, HttpApi,
-        libraries: ['dart:async', _jsonMapping(buildStep)]);
-    if (libBlock != null) {
-      return '$libBlock\n'
-          'import \'dart:io\' show HttpRequest, HttpResponse;\n'
-          'import \'dart:convert\' show UTF8;\n';
-    }
-    if (element is ClassElement && hasAnnotation(element, HttpApi)) {
-      final _Api api = _parse(element);
-      // interface
-      String code = '/// Server interface of ${api.service}.\n';
-      code += 'abstract class ${api.service}Server {';
-      for (_Function fn in api.functions) {
-        code += '/// ${fn.method} ${fn.path.path}\n';
-        final List<String> fnParams = new List()
-          ..add('HttpRequest httpRequest')
-          ..addAll(fn.fnParams);
-        code += 'Future<${fn.response}> ${fn.name}(${fnParams.join(', ')});\n';
-      }
-      code += '}\n';
+  FutureOr<String> generate(LibraryReader library, BuildStep buildStep) {
+    List<AnnotatedElement> elements =
+        library.annotatedWith(new TypeChecker.fromRuntime(HttpApi)).toList();
+    if (elements.isEmpty) return null;
+    List<String> blocks = [];
+    blocks.add(generateImportBlock(
+      buildStep,
+      libraries: ['dart:async', _jsonMapping(buildStep)],
+    ));
+    blocks.add('import \'dart:io\' show HttpRequest, HttpResponse;');
+    blocks.add('import \'dart:convert\' show UTF8;');
 
-      // handler
-      code += '/// HTTP handler of ${api.service}.\n';
-      code += 'class ${api.service}HttpHandler {\n';
-      code += '  final ${api.service}Server _server;\n';
-      for (_Function fn in api.functions) {
-        if (fn.path.paramNames.isNotEmpty) {
-          String regexp = fn.path.simplePath;
-          for (int i = 0; i < fn.path.paramNames.length; i++) {
-            String pattern;
-            switch (fn.path.paramTypes[i]) {
-              case 'int':
-                pattern = '(\d+)';
-                break;
-              default:
-                pattern = '(\w+)';
-                break;
-            }
-            regexp = regexp.replaceFirst('{}', pattern);
-          }
-          code +=
-              '  final RegExp _regexp${fn.casedName} = new RegExp(r\'^$regexp\$\');\n';
-        }
+    for (var ae in elements) {
+      if (ae.element is ClassElement) {
+        blocks.add(_generate(ae.element, buildStep));
       }
-      code += '\n\n /// HTTP handler of ${api.service}.\n';
-      code += '  ${api.service}HttpHandler(this._server);\n';
-      code += '  /// Tries to handle the request, returns a Future if the\n';
-      code += '  /// path matches any of the configured patterns.\n';
-      code += '  Future<Null> handle(HttpRequest httpRequest) {\n';
-      code += '    final String _path = httpRequest.uri.path;\n';
-      for (_Function fn in api.functions) {
-        code += '  if (httpRequest.method == \'${fn.method.toUpperCase()}\'';
-        final List<String> parts = fn.path.simplePath.split('{}');
-        if (parts.length == 1) {
-          code += ' && _path == \'${fn.path.simplePath}\'';
-        } else if (parts.first.isNotEmpty) {
-          code += ' && _path.startsWith(\'${parts.first}\')';
-        }
-        code += ') {\n';
-        code +=
-            '  final Future<Null> f = _handle${fn.casedName}(httpRequest);\n';
-        code += '  if (f != null) return f;\n';
-        code += '}\n';
-      }
-      code += '    return null;\n';
-      code += '  }\n';
-      for (_Function fn in api.functions) {
-        code += '/// ${fn.method.toUpperCase()} ${fn.path.path}\n';
-        code +=
-            'Future<Null> _handle${fn.casedName}(HttpRequest httpRequest) async { ';
-        if (fn.path.paramNames.isNotEmpty) {
-          code +=
-              '  final Match match = _regexp${fn.casedName}.matchAsPrefix(httpRequest.uri.path);';
-          code += ' if (match == null) return null;\n';
-          for (int i = 0; i < fn.path.paramNames.length; i++) {
-            code +=
-                '  final ${fn.path.paramTypes[i]} ${fn.path.paramNames[i]} =';
-            switch (fn.path.paramTypes[i]) {
-              case 'int':
-                code += 'int.parse(match[${i+1}]);';
-                break;
-              default:
-                code += 'match[${i+1}];';
-                break;
-            }
-          }
-        }
-        final List<String> callParams = ['httpRequest']
-          ..addAll(fn.path.paramNames);
-        if (fn.requestVar != null) {
-          code += 'final String _body = await UTF8.decodeStream(httpRequest);';
-          code += 'final ${fn.request} ${fn.requestVar} = ';
-          switch (fn.request) {
-            case 'String':
-              code += '_body;';
-              break;
+    }
+
+    return blocks.join('\n');
+  }
+
+  String _generate(Element element, BuildStep buildStep) {
+    final _Api api = _parse(element);
+    // interface
+    String code = '/// Server interface of ${api.service}.\n';
+    code += 'abstract class ${api.service}Server {';
+    for (_Function fn in api.functions) {
+      code += '/// ${fn.method} ${fn.path.path}\n';
+      final List<String> fnParams = new List()
+        ..add('HttpRequest httpRequest')
+        ..addAll(fn.fnParams);
+      code += 'Future<${fn.response}> ${fn.name}(${fnParams.join(', ')});\n';
+    }
+    code += '}\n';
+
+    // handler
+    code += '/// HTTP handler of ${api.service}.\n';
+    code += 'class ${api.service}HttpHandler {\n';
+    code += '  final ${api.service}Server _server;\n';
+    for (_Function fn in api.functions) {
+      if (fn.path.paramNames.isNotEmpty) {
+        String regexp = fn.path.simplePath;
+        for (int i = 0; i < fn.path.paramNames.length; i++) {
+          String pattern;
+          switch (fn.path.paramTypes[i]) {
             case 'int':
-              code += 'int.parse(_body);';
+              pattern = '(\d+)';
               break;
             default:
-              code += '${fn.request}Mapper.fromJson(_body);';
+              pattern = '(\w+)';
               break;
           }
-          callParams.add(fn.requestVar);
+          regexp = regexp.replaceFirst('{}', pattern);
         }
         code +=
-            '    final ${fn.response} _result = await _server.${fn.name}(${callParams.join(', ')});';
-        code += '  final HttpResponse _response = httpRequest.response;';
-        code += '  if (_result != null) {';
-        switch (fn.response) {
+            '  final RegExp _regexp${fn.casedName} = new RegExp(r\'^$regexp\$\');\n';
+      }
+    }
+    code += '\n\n /// HTTP handler of ${api.service}.\n';
+    code += '  ${api.service}HttpHandler(this._server);\n';
+    code += '  /// Tries to handle the request, returns a Future if the\n';
+    code += '  /// path matches any of the configured patterns.\n';
+    code += '  Future<Null> handle(HttpRequest httpRequest) {\n';
+    code += '    final String _path = httpRequest.uri.path;\n';
+    for (_Function fn in api.functions) {
+      code += '  if (httpRequest.method == \'${fn.method.toUpperCase()}\'';
+      final List<String> parts = fn.path.simplePath.split('{}');
+      if (parts.length == 1) {
+        code += ' && _path == \'${fn.path.simplePath}\'';
+      } else if (parts.first.isNotEmpty) {
+        code += ' && _path.startsWith(\'${parts.first}\')';
+      }
+      code += ') {\n';
+      code += '  final Future<Null> f = _handle${fn.casedName}(httpRequest);\n';
+      code += '  if (f != null) return f;\n';
+      code += '}\n';
+    }
+    code += '    return null;\n';
+    code += '  }\n';
+    for (_Function fn in api.functions) {
+      code += '/// ${fn.method.toUpperCase()} ${fn.path.path}\n';
+      code +=
+          'Future<Null> _handle${fn.casedName}(HttpRequest httpRequest) async { ';
+      if (fn.path.paramNames.isNotEmpty) {
+        code +=
+            '  final Match match = _regexp${fn.casedName}.matchAsPrefix(httpRequest.uri.path);';
+        code += ' if (match == null) return null;\n';
+        for (int i = 0; i < fn.path.paramNames.length; i++) {
+          code += '  final ${fn.path.paramTypes[i]} ${fn.path.paramNames[i]} =';
+          switch (fn.path.paramTypes[i]) {
+            case 'int':
+              code += 'int.parse(match[${i+1}]);';
+              break;
+            default:
+              code += 'match[${i+1}];';
+              break;
+          }
+        }
+      }
+      final List<String> callParams = ['httpRequest']
+        ..addAll(fn.path.paramNames);
+      if (fn.requestVar != null) {
+        code += 'final String _body = await UTF8.decodeStream(httpRequest);';
+        code += 'final ${fn.request} ${fn.requestVar} = ';
+        switch (fn.request) {
           case 'String':
+            code += '_body;';
+            break;
           case 'int':
-            code += '_response.write(_result);';
+            code += 'int.parse(_body);';
             break;
           default:
-            code += '_response.write(${fn.response}Mapper.toJson(_result));';
+            code += '${fn.request}Mapper.fromJson(_body);';
             break;
         }
-        code += '}';
-        code += 'await _response.flush();';
-        code += 'await _response.close();';
-        code += '}\n';
+        callParams.add(fn.requestVar);
+      }
+      code +=
+          '    final ${fn.response} _result = await _server.${fn.name}(${callParams.join(', ')});';
+      code += '  final HttpResponse _response = httpRequest.response;';
+      code += '  if (_result != null) {';
+      switch (fn.response) {
+        case 'String':
+        case 'int':
+          code += '_response.write(_result);';
+          break;
+        default:
+          code += '_response.write(${fn.response}Mapper.toJson(_result));';
+          break;
       }
       code += '}';
-
-      return code;
+      code += 'await _response.flush();';
+      code += 'await _response.close();';
+      code += '}\n';
     }
-    return null;
+    code += '}';
+
+    return code;
   }
 }
 
