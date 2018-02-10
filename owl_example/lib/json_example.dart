@@ -56,6 +56,17 @@ class ChildClass {
   ///
   @JsonField(native: true)
   Map map;
+
+  @Transient()
+  Map _virtualField;
+
+  ///
+  @JsonField(native: true)
+  Map get virtualNativeField => _virtualField;
+
+  ///
+  @JsonField(native: true)
+  set virtualNativeField(Map value) => _virtualField = value;
 }
 
 ///
