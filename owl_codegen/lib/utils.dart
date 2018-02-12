@@ -4,6 +4,7 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart' show BuildStep;
+import 'package:owl/annotation/json.dart';
 import 'package:source_gen/source_gen.dart';
 
 const _owlVersion = '0.2.2';
@@ -40,6 +41,26 @@ List<ClassElement> listClasses(LibraryElement library, Type annotation) =>
         .fold(new List<ClassElement>(), (l1, l2) => l1..addAll(l2))
         .where((type) => hasAnnotation(type, annotation))
         .toList();
+
+///
+DartObject getJsonFieldAnnotation(FieldElement element) {
+  DartObject jsonField;
+
+  // Try to get the annotation from the getter or setter
+  bool isGetterSetter = element.getter != null && element.setter != null;
+  if (isGetterSetter && hasAnnotation(element.getter, JsonField)) {
+    jsonField = getAnnotation(element.getter, JsonField);
+  } else if (isGetterSetter && hasAnnotation(element.setter, JsonField)) {
+    jsonField = getAnnotation(element.setter, JsonField);
+  }
+
+  // Otherwise get the annotation from the plain field
+  if (jsonField == null) {
+    jsonField = getAnnotation(element, JsonField);
+  }
+
+  return jsonField;
+}
 
 /// Creates library-level import block.
 String generateImportBlock(BuildStep buildStep,

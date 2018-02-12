@@ -124,14 +124,7 @@ class _Field {
   _Field.fromElement(FieldElement elem) {
     fieldName = elem.name;
     keyName = elem.name;
-    bool isGetterSetter = elem.getter != null && elem.setter != null;
-    final jsonField = isGetterSetter
-      // Try to get the annotation from the gettor or setter
-      ? getAnnotation(elem.getter, JsonField) == null
-        ? getAnnotation(elem.setter, JsonField)
-        : getAnnotation(elem.getter, JsonField)
-      // Otherwise get the annotation from the plain field
-      : getAnnotation(elem, JsonField);
+    final jsonField = getJsonFieldAnnotation(elem);
 
     final String fieldType = elem.type.toString();
     if (fieldType.startsWith('List<') && fieldType.endsWith('>')) {
