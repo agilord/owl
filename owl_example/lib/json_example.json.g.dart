@@ -83,7 +83,8 @@ abstract class ChildClassMapper {
           ..put('id', object.id)
           ..put('left', ChildClassMapper.map(object.left))
           ..put('right', ChildClassMapper.map(object.right))
-          ..put('map', object.map))
+          ..put('map', object.map)
+          ..put('virtualNativeField', object.virtualNativeField))
         .toMap();
   }
 
@@ -95,6 +96,7 @@ abstract class ChildClassMapper {
     object.left = ChildClassMapper.parse(map['left']);
     object.right = ChildClassMapper.parse(map['right']);
     object.map = map['map'];
+    object.virtualNativeField = map['virtualNativeField'];
     return object;
   }
 

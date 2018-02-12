@@ -10,7 +10,7 @@ void main() {
   group('Map tests', () {
     final String exampleJson = '{"intList":[4,5,6],'
         '"dateTimeList":["2011-10-09T08:07:00.000Z"],'
-        '"children":[{"id":"2", "virtualNativeField":{"key":"value"}}]}';
+        '"children":[{"id":"2","virtualNativeField":{"key":"value"}}]}';
 
     test('From object to JSON.', () {
       final Entity entity = new Entity()
@@ -37,7 +37,7 @@ void main() {
       expect(entity.dateTimeList.first.hour, 8);
       expect(entity.dateTimeList.first.minute, 7);
       expect(entity.children.first.id, '2');
-      expect(entity.children.virtualNativeField['key'], 'value');
+      expect(entity.children.first.virtualNativeField['key'], 'value');
     });
   });
 }
