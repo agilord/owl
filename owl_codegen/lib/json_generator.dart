@@ -124,7 +124,7 @@ class _Field {
   _Field.fromElement(FieldElement elem) {
     fieldName = elem.name;
     keyName = elem.name;
-    final jsonField = getAnnotation(elem, JsonField);
+    final jsonField = getJsonFieldAnnotation(elem);
 
     final String fieldType = elem.type.toString();
     if (fieldType.startsWith('List<') && fieldType.endsWith('>')) {

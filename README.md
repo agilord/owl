@@ -13,7 +13,10 @@ contributors if you need migration path for early versions.
 ## Links
 
 - [source code][source]
-- contributors: [Agilord][agilord]
+- contributors:
+    - [Agilord][agilord]
+    - [Chance Snow][chances]
 
 [source]: https://github.com/agilord/owl
 [agilord]: https://www.agilord.com/
+[chances]: https://github.com/chances
