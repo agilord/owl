@@ -65,7 +65,7 @@ class ChildClass {
   Map get virtualNativeField => _virtualField;
 
   ///
-  @JsonField(native: true)
+  // It is enough to annotate either the getter or setter.
   set virtualNativeField(Map value) => _virtualField = value;
 }
 
