@@ -1,5 +1,10 @@
 # Changelog
 
+# 0.2.3-dev
+
+- Support annotated getters and setters for JSON generator.
+- Fixed `analysis_options.yaml`.
+
 # 0.2.2
 
 - Upgrade dependencies (`build`, `build_runner` and `source_gen`).
