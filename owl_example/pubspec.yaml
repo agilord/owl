@@ -11,11 +11,13 @@ environment:
   sdk: '>=1.20.0 <2.0.0'
 
 dependencies:
-  owl:
-    path: '../owl'
+  owl: ^0.2.1
   postgresql: 'any'
 
 dev_dependencies:
+  owl_codegen: ^0.2.2
+  test: '>=0.12.0 <0.13.0'
+
+dependency_overrides:
   owl_codegen:
     path: '../owl_codegen'
-  test: '>=0.12.0 <0.13.0'
