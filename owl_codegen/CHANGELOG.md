@@ -4,6 +4,7 @@
 
 - Support annotated getters and setters for JSON generator.
 - Fixed `analysis_options.yaml`.
+- Upgrade dependencies.
 
 # 0.2.2
 
