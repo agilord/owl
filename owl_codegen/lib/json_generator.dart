@@ -75,8 +75,9 @@ class JsonGenerator extends Generator {
       // ignore: prefer_final_locals
       String parse;
       if (field.isList && field.parserFn != null) {
-        parse =
-            "(map['${field.keyName}'] as List<dynamic>)?.map(${field.parserFn})?.toList()";
+        parse = "(map['${field.keyName}'] as List<dynamic>)?."
+            "\n// ignore: strong_mode_uses_dynamic_as_bottom\n"
+            "map(${field.parserFn})?.toList()";
       } else if (field.isList) {
         parse =
             "(map['${field.keyName}'] as List<${field.baseType}>)?.toList()";

@@ -48,13 +48,17 @@ abstract class EntityMapper {
 
     // ignore: avoid_as
     object.dateTimeList = (map['dateTimeList'] as List<dynamic>)
-        ?.map(_owl_json.DateTimeMapper.parse)
+        ?.
+// ignore: strong_mode_uses_dynamic_as_bottom
+        map(_owl_json.DateTimeMapper.parse)
         ?.toList();
     object.alternativeName = map['alt_name'];
 
     // ignore: avoid_as
     object.children = (map['children'] as List<dynamic>)
-        ?.map(ChildClassMapper.parse)
+        ?.
+// ignore: strong_mode_uses_dynamic_as_bottom
+        map(ChildClassMapper.parse)
         ?.toList();
     object.virtualField = map['virtualField'];
     return object;
