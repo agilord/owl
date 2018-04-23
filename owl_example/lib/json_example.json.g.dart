@@ -10,7 +10,7 @@
 // ignore: unused_import, library_prefixes
 import 'json_example.dart';
 // ignore: unused_import, library_prefixes
-import 'dart:convert';
+import 'dart:convert' as convert;
 // ignore: unused_import, library_prefixes
 import 'package:owl/util/json/core.dart' as _owl_json;
 
@@ -49,7 +49,7 @@ abstract class EntityMapper {
     // ignore: avoid_as
     object.dateTimeList = (map['dateTimeList'] as List<dynamic>)
         ?.
-// ignore: strong_mode_uses_dynamic_as_bottom
+// ignore: strong_mode_invalid_cast_method
         map(_owl_json.DateTimeMapper.parse)
         ?.toList();
     object.alternativeName = map['alt_name'];
@@ -57,7 +57,7 @@ abstract class EntityMapper {
     // ignore: avoid_as
     object.children = (map['children'] as List<dynamic>)
         ?.
-// ignore: strong_mode_uses_dynamic_as_bottom
+// ignore: strong_mode_invalid_cast_method
         map(ChildClassMapper.parse)
         ?.toList();
     object.virtualField = map['virtualField'];
@@ -67,14 +67,14 @@ abstract class EntityMapper {
   /// Converts a JSON string to an instance of Entity.
   static Entity fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    final Map<String, dynamic> map = convert.json.decoder.convert(json);
     return parse(map);
   }
 
   /// Converts an instance of Entity to JSON string.
   static String toJson(Entity object) {
     if (object == null) return null;
-    return JSON.encoder.convert(map(object));
+    return convert.json.encoder.convert(map(object));
   }
 }
 
@@ -107,14 +107,14 @@ abstract class ChildClassMapper {
   /// Converts a JSON string to an instance of ChildClass.
   static ChildClass fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    final Map<String, dynamic> map = convert.json.decoder.convert(json);
     return parse(map);
   }
 
   /// Converts an instance of ChildClass to JSON string.
   static String toJson(ChildClass object) {
     if (object == null) return null;
-    return JSON.encoder.convert(map(object));
+    return convert.json.encoder.convert(map(object));
   }
 }
 
@@ -141,13 +141,13 @@ abstract class WithEqualsAndHashMapper {
   /// Converts a JSON string to an instance of WithEqualsAndHash.
   static WithEqualsAndHash fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    final Map<String, dynamic> map = convert.json.decoder.convert(json);
     return parse(map);
   }
 
   /// Converts an instance of WithEqualsAndHash to JSON string.
   static String toJson(WithEqualsAndHash object) {
     if (object == null) return null;
-    return JSON.encoder.convert(map(object));
+    return convert.json.encoder.convert(map(object));
   }
 }

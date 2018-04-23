@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.2.4
+
+- Use lowercase JSON and UTF8 from dart:convert.
+
 # 0.2.3
 
 - Support annotated getters and setters for JSON generator.

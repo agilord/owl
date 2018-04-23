@@ -23,8 +23,11 @@ class JsonGenerator extends Generator {
     List<String> blocks = [];
     blocks.add(generateImportBlock(
       buildStep,
-      libraries: ['dart:convert'],
-      aliasedLibraries: {_coreAlias: 'package:owl/util/json/core.dart'},
+      libraries: [],
+      aliasedLibraries: {
+        'convert': 'dart:convert',
+        _coreAlias: 'package:owl/util/json/core.dart',
+      },
     ));
 
     for (var ae in elements) {
@@ -76,7 +79,7 @@ class JsonGenerator extends Generator {
       String parse;
       if (field.isList && field.parserFn != null) {
         parse = "(map['${field.keyName}'] as List<dynamic>)?."
-            "\n// ignore: strong_mode_uses_dynamic_as_bottom\n"
+            "\n// ignore: strong_mode_invalid_cast_method\n"
             "map(${field.parserFn})?.toList()";
       } else if (field.isList) {
         parse =
@@ -99,14 +102,15 @@ class JsonGenerator extends Generator {
         '\n/// Converts a JSON string to an instance of ${element.name}.\n';
     mapper += 'static ${element.name} fromJson(String json) {';
     mapper += '  if (json == null || json.isEmpty) return null;\n';
-    mapper += '  final Map<String, dynamic> map = JSON.decoder.convert(json);';
+    mapper +=
+        '  final Map<String, dynamic> map = convert.json.decoder.convert(json);';
     mapper += '  return parse(map);';
     mapper += '}\n';
 
     mapper += '\n/// Converts an instance of ${element.name} to JSON string.\n';
     mapper += 'static String toJson(${element.name} object) {';
     mapper += '  if (object == null) return null;\n';
-    mapper += '  return JSON.encoder.convert(map(object));';
+    mapper += '  return convert.json.encoder.convert(map(object));';
     mapper += '}\n';
 
     mapper += '}';

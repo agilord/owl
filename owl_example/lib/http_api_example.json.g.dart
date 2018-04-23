@@ -10,7 +10,7 @@
 // ignore: unused_import, library_prefixes
 import 'http_api_example.dart';
 // ignore: unused_import, library_prefixes
-import 'dart:convert';
+import 'dart:convert' as convert;
 // ignore: unused_import, library_prefixes
 import 'package:owl/util/json/core.dart' as _owl_json;
 
@@ -37,14 +37,14 @@ abstract class ArticleMapper {
   /// Converts a JSON string to an instance of Article.
   static Article fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    final Map<String, dynamic> map = convert.json.decoder.convert(json);
     return parse(map);
   }
 
   /// Converts an instance of Article to JSON string.
   static String toJson(Article object) {
     if (object == null) return null;
-    return JSON.encoder.convert(map(object));
+    return convert.json.encoder.convert(map(object));
   }
 }
 
@@ -71,13 +71,13 @@ abstract class StatusMapper {
   /// Converts a JSON string to an instance of Status.
   static Status fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = JSON.decoder.convert(json);
+    final Map<String, dynamic> map = convert.json.decoder.convert(json);
     return parse(map);
   }
 
   /// Converts an instance of Status to JSON string.
   static String toJson(Status object) {
     if (object == null) return null;
-    return JSON.encoder.convert(map(object));
+    return convert.json.encoder.convert(map(object));
   }
 }

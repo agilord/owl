@@ -117,7 +117,7 @@ class HttpServerGenerator extends Generator {
       libraries: ['dart:async', _jsonMapping(buildStep)],
     ));
     blocks.add('import \'dart:io\' show HttpRequest, HttpResponse;');
-    blocks.add('import \'dart:convert\' show UTF8;');
+    blocks.add('import \'dart:convert\' as convert show utf8;');
 
     for (var ae in elements) {
       if (ae.element is ClassElement) {
@@ -209,7 +209,8 @@ class HttpServerGenerator extends Generator {
       final List<String> callParams = ['httpRequest']
         ..addAll(fn.path.paramNames);
       if (fn.requestVar != null) {
-        code += 'final String _body = await UTF8.decodeStream(httpRequest);';
+        code +=
+            'final String _body = await convert.utf8.decodeStream(httpRequest);';
         code += 'final ${fn.request} ${fn.requestVar} = ';
         switch (fn.request) {
           case 'String':

@@ -55,18 +55,20 @@ class ChildClass {
 
   ///
   @JsonField(native: true)
-  Map map;
+  Map<dynamic, dynamic> map;
 
   @Transient()
-  Map _virtualField;
+  Map<dynamic, dynamic> _virtualField;
 
   ///
   @JsonField(native: true)
-  Map get virtualNativeField => _virtualField;
+  // ignore: unnecessary_getters_setters
+  Map<dynamic, dynamic> get virtualNativeField => _virtualField;
 
   ///
   // It is enough to annotate either the getter or setter.
-  set virtualNativeField(Map value) => _virtualField = value;
+  // ignore: unnecessary_getters_setters
+  set virtualNativeField(Map<dynamic, dynamic> value) => _virtualField = value;
 }
 
 ///

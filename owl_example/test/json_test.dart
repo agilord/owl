@@ -20,7 +20,7 @@ void main() {
           new ChildClass()
             ..transientField = 3
             ..id = '2'
-            ..virtualNativeField = {'key': 'value'}
+            ..virtualNativeField = <String, String>{'key': 'value'}
         ];
       final String json = EntityMapper.toJson(entity);
       expect(json, exampleJson);

@@ -14,7 +14,7 @@ import 'dart:async';
 // ignore: unused_import, library_prefixes
 import 'http_api_example.json.g.dart';
 import 'dart:io' show HttpRequest, HttpResponse;
-import 'dart:convert' show UTF8;
+import 'dart:convert' as convert show utf8;
 
 /// Server interface of Content.
 abstract class ContentServer {
@@ -124,7 +124,7 @@ class ContentHttpHandler {
     final Match match = _regexpPostArticle.matchAsPrefix(httpRequest.uri.path);
     if (match == null) return null;
     final int id = int.parse(match[1]);
-    final String _body = await UTF8.decodeStream(httpRequest);
+    final String _body = await convert.utf8.decodeStream(httpRequest);
     final Article article = ArticleMapper.fromJson(_body);
     final Status _result = await _server.postArticle(httpRequest, id, article);
     final HttpResponse _response = httpRequest.response;
