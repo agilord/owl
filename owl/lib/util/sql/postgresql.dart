@@ -7,7 +7,7 @@ import 'package:postgresql/postgresql.dart';
 
 class _BaseQuery {
   String _query;
-  List _params = [];
+  final List _params = [];
 
   /// The SQL query.
   String get query => _query;
