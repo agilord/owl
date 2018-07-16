@@ -32,7 +32,7 @@ class HttpWebappClientGenerator extends Generator {
 
     for (var ae in elements) {
       if (ae.element is ClassElement) {
-        blocks.add(_generate(ae.element, buildStep));
+        blocks.add(_generate(ae.element as ClassElement, buildStep));
       }
     }
 
@@ -121,14 +121,14 @@ class HttpServerGenerator extends Generator {
 
     for (var ae in elements) {
       if (ae.element is ClassElement) {
-        blocks.add(_generate(ae.element, buildStep));
+        blocks.add(_generate(ae.element as ClassElement, buildStep));
       }
     }
 
     return blocks.join('\n');
   }
 
-  String _generate(Element element, BuildStep buildStep) {
+  String _generate(ClassElement element, BuildStep buildStep) {
     final _Api api = _parse(element);
     // interface
     String code = '/// Server interface of ${api.service}.\n';

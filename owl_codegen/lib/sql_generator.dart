@@ -38,7 +38,7 @@ class PostgresSqlGenerator extends Generator {
 
     for (var ae in elements) {
       if (ae.element is ClassElement) {
-        blocks.add(_generate(ae.element, buildStep));
+        blocks.add(_generate(ae.element as ClassElement, buildStep));
       }
     }
 
@@ -49,6 +49,7 @@ class PostgresSqlGenerator extends Generator {
     final List<_Table> tables = elements
         .map((ae) => ae.element)
         .where((e) => e is ClassElement)
+        .cast<ClassElement>()
         .map((e) => _parseClass(e))
         .toList()
           ..sort((t1, t2) => t1.tableName.compareTo(t2.tableName));
@@ -129,6 +130,9 @@ class PostgresSqlGenerator extends Generator {
         parse = "${column.parserFn}(map['${column.columnName}'])";
       } else {
         parse = 'map[\'${column.columnName}\']';
+        if (isNativeJson(column.dartType)) {
+          parse += ' as ${column.dartType}';
+        }
       }
       code += 'object.${column.field} = $parse;\n';
     }

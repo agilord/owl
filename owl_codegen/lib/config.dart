@@ -27,17 +27,18 @@ Future<Config> parseArgs(List<String> args) async {
   final ArgResults argv = (new ArgParser()
         ..addOption('type', abbr: 't')
         ..addOption('package', abbr: 'p')
-        ..addOption('glob', abbr: 'g', allowMultiple: true, splitCommas: true))
+        ..addMultiOption('glob', abbr: 'g', splitCommas: true))
       .parse(args);
 
-  packageName = argv['package'];
+  packageName = argv['package'] as String;
   if (packageName == null) {
     packageName =
-        yaml.loadYaml(new File('pubspec.yaml').readAsStringSync())['name'];
+        yaml.loadYaml(new File('pubspec.yaml').readAsStringSync())['name']
+            as String;
   }
 
   if (argv['glob'] != null) {
-    globs.addAll(argv['glob']);
+    globs.addAll((argv['glob'] as List).cast<String>());
   }
   globs.addAll(argv.rest);
   if (globs.isEmpty) {
@@ -52,7 +53,7 @@ Future<Config> parseArgs(List<String> args) async {
   }
 
   return new Config()
-    ..type = argv['type'] ?? 'all'
+    ..type = argv['type'] as String ?? 'all'
     ..package = packageName
     ..globs = globs;
 }

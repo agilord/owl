@@ -1,6 +1,9 @@
 #   https://www.dartlang.org/guides/language/analysis-options
 analyzer:
-  strong-mode: true
+  language:
+    enablePreviewDart2: true
+  strong-mode:
+    implicit-casts: false
 
 # http://dart-lang.github.io/linter/lints/options/options.html
 linter:
@@ -8,7 +11,7 @@ linter:
     - always_declare_return_types
 #    - always_specify_types
     - annotate_overrides
-    - avoid_as
+#    - avoid_as
     - avoid_empty_else
     - avoid_init_to_null
     - avoid_return_types_on_setters

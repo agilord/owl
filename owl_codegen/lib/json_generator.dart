@@ -32,7 +32,7 @@ class JsonGenerator extends Generator {
 
     for (var ae in elements) {
       if (ae.element is ClassElement) {
-        blocks.add(_generate(ae.element, buildStep));
+        blocks.add(_generate(ae.element as ClassElement, buildStep));
       }
     }
 
@@ -78,16 +78,23 @@ class JsonGenerator extends Generator {
       // ignore: prefer_final_locals
       String parse;
       if (field.isList && field.parserFn != null) {
-        parse = "(map['${field.keyName}'] as List<dynamic>)?."
-            "\n// ignore: strong_mode_invalid_cast_method\n"
-            "map(${field.parserFn})?.toList()";
+        parse = "(map['${field.keyName}'] as List<dynamic>)"
+            "\n// ignore: argument_type_not_assignable\n"
+            "?.map((d) => ${field.parserFn}(d))?.cast<${field.baseType}>()?.toList()";
       } else if (field.isList) {
-        parse =
-            "(map['${field.keyName}'] as List<${field.baseType}>)?.toList()";
+        parse = "(map['${field.keyName}'] as List)"
+            "?.cast<${field.baseType}>()"
+            "?.toList()";
       } else if (field.parserFn != null) {
-        parse = "${field.parserFn}(map['${field.keyName}'])";
+        parse =
+            "${field.parserFn}(map['${field.keyName}'] as Map<String, dynamic>)";
       } else {
         parse = "map['${field.keyName}']";
+        if (isNativeJson(field.baseType)) {
+          parse += ' as ${field.baseType}';
+        } else if (field.baseType.startsWith('Map')) {
+          parse += ' as ${field.baseType}';
+        }
       }
       if (field.isList) {
         mapper += '\n    // ignore: avoid_as\n';

@@ -38,7 +38,8 @@ ClassElement getClassRef(LibraryElement library, DartObject obj) {
 List<ClassElement> listClasses(LibraryElement library, Type annotation) =>
     library.units
         .map((unit) => unit.types)
-        .fold(new List<ClassElement>(), (l1, l2) => l1..addAll(l2))
+        .fold<List<ClassElement>>(
+            new List<ClassElement>(), (l1, l2) => l1..addAll(l2))
         .where((type) => hasAnnotation(type, annotation))
         .toList();
 

@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.3.0
+
+- Updated to Dart 2.
+
 # 0.2.4
 
 - Use lowercase JSON and UTF8 from dart:convert.
