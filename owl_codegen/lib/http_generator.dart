@@ -6,8 +6,9 @@ import 'dart:async';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
-import 'package:id/id.dart';
 import 'package:source_gen/source_gen.dart';
+
+import 'ext/id.dart';
 
 import 'package:owl/annotation/http.dart';
 

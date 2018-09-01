@@ -3,20 +3,24 @@
 
 import 'dart:async';
 
-import 'package:postgresql/postgresql.dart';
+import 'package:postgres/postgres.dart';
+
+final _oneDayInSeconds = new Duration(days: 1).inSeconds;
 
 class _BaseQuery {
   String _query;
-  final List _params = [];
+  final _params = <String, dynamic>{};
 
   /// The SQL query.
   String get query => _query;
 
   /// The parameters for that query.
-  List get params => _params;
+  Map<String, dynamic> get params => _params;
 
-  Future<int> _execute(Connection connection, {bool strict: true}) async {
-    final int count = await connection.execute(query, params);
+  Future<int> _execute(PostgreSQLExecutionContext connection,
+      {bool strict: true}) async {
+    final int count = await connection.execute(query,
+        substitutionValues: params, timeoutInSeconds: _oneDayInSeconds);
     if (strict) {
       if (count == 0) throw new Exception('No such record.');
       if (count > 1) throw new Exception('Too many records.');
@@ -30,8 +34,9 @@ class _BaseQuery {
       for (String column in where.keys) {
         final param = where[column];
         if (param != null) {
-          conditions.add('($column = @${_params.length})');
-          _params.add(param);
+          final key = 'p${_params.length}';
+          conditions.add('($column = @$key)');
+          _params[key] = param;
         }
       }
       sb.write(' WHERE ${conditions.join(' AND ')}');
@@ -64,21 +69,24 @@ class SimpleCreate extends _BaseQuery {
       final param = set[column];
       if (param != null) {
         columns.add(column);
-        placeholders.add('@${_params.length}');
-        _params.add(param);
+        final key = 'p${_params.length}';
+        placeholders.add('@$key');
+        _params[key] = param;
       }
     }
     clear?.forEach((String column) {
       columns.add(column);
-      placeholders.add('@${_params.length}');
-      _params.add(null);
+      final key = 'p${_params.length}';
+      placeholders.add('@$key');
+      _params[key] = null;
     });
     sb.write(' (${columns.join(', ')}) VALUES (${placeholders.join(', ')})');
     _query = sb.toString();
   }
 
   /// Execute the query.
-  Future<int> execute(Connection connection, {bool strict: true}) =>
+  Future<int> execute(PostgreSQLExecutionContext connection,
+          {bool strict: true}) =>
       _execute(connection, strict: strict);
 }
 
@@ -129,8 +137,12 @@ class SimpleSelect extends _BaseQuery {
   }
 
   /// Return one row.
-  Future<Row> get(Connection connection, {bool strict: true}) async {
-    final List<Row> rows = await connection.query(_query, _params).toList();
+  Future<Map<String, Map<String, dynamic>>> get(
+      PostgreSQLExecutionContext connection,
+      {bool strict: true}) async {
+    final List<Map<String, Map<String, dynamic>>> rows =
+        await connection.mappedResultsQuery(_query,
+            substitutionValues: _params, timeoutInSeconds: _oneDayInSeconds);
     if (strict) {
       if (rows.isEmpty) throw new Exception('No such record.');
       if (rows.length > 1) throw new Exception('Too many records.');
@@ -140,7 +152,10 @@ class SimpleSelect extends _BaseQuery {
   }
 
   /// Return multiple rows.
-  Stream<Row> list(Connection connection) => connection.query(_query, _params);
+  Future<List<Map<String, Map<String, dynamic>>>> list(
+          PostgreSQLExecutionContext connection) =>
+      connection.mappedResultsQuery(_query,
+          substitutionValues: _params, timeoutInSeconds: _oneDayInSeconds);
 }
 
 /// Simple UPDATE query builder.
@@ -169,13 +184,15 @@ class SimpleUpdate extends _BaseQuery {
       if (clear?.contains(column) == true) continue;
       final param = set[column];
       if (param != null) {
-        updates.add('$column = @${_params.length}');
-        _params.add(param);
+        final key = 'p${_params.length}';
+        updates.add('$column = @$key');
+        _params[key] = param;
       }
     }
     clear?.forEach((String column) {
-      updates.add('$column = @${_params.length}');
-      _params.add(null);
+      final key = 'p${_params.length}';
+      updates.add('$column = @$key');
+      _params[key] = null;
     });
     sb.write(' SET ${updates.join(', ')}');
     _addWhere(sb, where);
@@ -183,7 +200,8 @@ class SimpleUpdate extends _BaseQuery {
   }
 
   /// Execute the query.
-  Future<int> execute(Connection connection, {bool strict: true}) =>
+  Future<int> execute(PostgreSQLExecutionContext connection,
+          {bool strict: true}) =>
       _execute(connection, strict: strict);
 }
 
@@ -207,6 +225,7 @@ class SimpleDelete extends _BaseQuery {
   }
 
   /// Execute the query.
-  Future<int> execute(Connection connection, {bool strict: true}) =>
+  Future<int> execute(PostgreSQLExecutionContext connection,
+          {bool strict: true}) =>
       _execute(connection, strict: strict);
 }

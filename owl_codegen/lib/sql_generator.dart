@@ -6,8 +6,9 @@ import 'dart:async';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
-import 'package:id/id.dart';
 import 'package:source_gen/source_gen.dart';
+
+import 'ext/id.dart';
 
 import 'package:owl/annotation/sql.dart';
 
@@ -30,7 +31,7 @@ class PostgresSqlGenerator extends Generator {
       aliasedLibraries: {
         _coreAlias: 'package:owl/util/json/core.dart',
         _crudPgAlias: 'package:owl/util/sql/postgresql.dart',
-        'pg': 'package:postgresql/postgresql.dart',
+        'pg': 'package:postgres/postgres.dart',
       },
     ));
 
@@ -119,10 +120,10 @@ class PostgresSqlGenerator extends Generator {
 
     // parseRow
     code += '/// Convert database row to object.\n';
-    code += 'static ${element.name} parseRow(pg.Row row) {\n';
-    code += '  if (row == null) return null;\n';
-    code += '  // ignore: always_specify_types\n';
-    code += '  final Map map = row.toMap();\n';
+    code +=
+        'static ${element.name} parseRow(Map<String, Map<String, dynamic>> compositeRow) {\n';
+    code += '  if (compositeRow == null) return null;\n';
+    code += '  final Map<String, dynamic> map = compositeRow.values.single;\n';
     code += '  final ${element.name} object = new ${element.name}();\n';
     for (var column in table.columns) {
       String parse;
@@ -173,7 +174,8 @@ class PostgresSqlGenerator extends Generator {
 
     // create
     code += '/// Insert a row into ${table.tableName}.\n';
-    code += 'static Future<int> create(pg.Connection connection, '
+    code +=
+        'static Future<int> create(pg.PostgreSQLExecutionContext connection, '
         '${element.name} $varName, '
         '{String schema, String table, List<String> clear, '
         'bool strict: true, bool ifNotExists: false,}) async {';
@@ -193,14 +195,14 @@ class PostgresSqlGenerator extends Generator {
     // read
     code += '/// Read a row from ${table.tableName}.\n';
     code += 'static Future<${element.name}> read('
-        'pg.Connection connection, '
+        'pg.PostgreSQLExecutionContext connection, '
         '$pkFnParams, '
         '{String schema, String table, List<String> columns, '
         'bool forUpdate: false, bool strict: true,}) async {\n';
     for (_Column c in pks) {
       code += 'assert(${c.field} != null);\n';
     }
-    code += 'final pg.Row _row = await new $_crudPgAlias.SimpleSelect('
+    code += 'final _row = await new $_crudPgAlias.SimpleSelect('
         'schema: schema, table: table ?? \'${table.tableName}\', columns: columns,';
     code += 'where: <String, dynamic>{$pkWhere},';
     code += 'limit: (strict ? 2:1), '
@@ -211,7 +213,7 @@ class PostgresSqlGenerator extends Generator {
     // update
     code += '/// Update a row in ${table.tableName}.\n';
     code += 'static Future<int> update('
-        'pg.Connection connection, '
+        'pg.PostgreSQLExecutionContext connection, '
         '${element.name} $varName, {String schema, String table, ';
     code +=
         '$vkFnParams $autoVersionFnParam List<String> clear, bool strict: true,}) async {';
@@ -240,7 +242,7 @@ class PostgresSqlGenerator extends Generator {
     // delete
     code += '/// Delete a row from ${table.tableName}.\n';
     code += 'static Future<int> delete('
-        'pg.Connection connection, '
+        'pg.PostgreSQLExecutionContext connection, '
         '$pkFnParams, '
         '{String schema, String table, ${vkFnParams}bool strict: true,}) async {';
     for (_Column c in pks) {

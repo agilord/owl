@@ -16,7 +16,7 @@ import 'package:owl/util/json/core.dart' as _owl_json;
 // ignore: unused_import, library_prefixes
 import 'package:owl/util/sql/postgresql.dart' as _owl_sql_pg;
 // ignore: unused_import, library_prefixes
-import 'package:postgresql/postgresql.dart' as pg;
+import 'package:postgres/postgres.dart' as pg;
 
 /// DDL statements for the default schema.
 @Deprecated('Use SqlCrudExampleDdl.getDdls() instead.')
@@ -89,10 +89,9 @@ abstract class MyCustomEntityTable {
   static const String version = 'version';
 
   /// Convert database row to object.
-  static EntityMain parseRow(pg.Row row) {
-    if (row == null) return null;
-    // ignore: always_specify_types
-    final Map map = row.toMap();
+  static EntityMain parseRow(Map<String, Map<String, dynamic>> compositeRow) {
+    if (compositeRow == null) return null;
+    final Map<String, dynamic> map = compositeRow.values.single;
     final EntityMain object = new EntityMain();
     object.entityId = map['entity_id'] as int;
     object.ts = _owl_json.DateTimeMapper.parse(map['ts']);
@@ -116,7 +115,7 @@ abstract class MyCustomEntityTable {
 
   /// Insert a row into my_custom_entity.
   static Future<int> create(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     EntityMain entityMain, {
     String schema,
     String table,
@@ -139,7 +138,7 @@ abstract class MyCustomEntityTable {
 
   /// Read a row from my_custom_entity.
   static Future<EntityMain> read(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     int entityId, {
     String schema,
     String table,
@@ -148,7 +147,7 @@ abstract class MyCustomEntityTable {
     bool strict: true,
   }) async {
     assert(entityId != null);
-    final pg.Row _row = await new _owl_sql_pg.SimpleSelect(
+    final _row = await new _owl_sql_pg.SimpleSelect(
             schema: schema,
             table: table ?? 'my_custom_entity',
             columns: columns,
@@ -161,7 +160,7 @@ abstract class MyCustomEntityTable {
 
   /// Update a row in my_custom_entity.
   static Future<int> update(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     EntityMain entityMain, {
     String schema,
     String table,
@@ -191,7 +190,7 @@ abstract class MyCustomEntityTable {
 
   /// Delete a row from my_custom_entity.
   static Future<int> delete(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     int entityId, {
     String schema,
     String table,
@@ -223,10 +222,9 @@ abstract class EntityDetailTable {
   static const String isActive = 'is_active';
 
   /// Convert database row to object.
-  static EntityDetail parseRow(pg.Row row) {
-    if (row == null) return null;
-    // ignore: always_specify_types
-    final Map map = row.toMap();
+  static EntityDetail parseRow(Map<String, Map<String, dynamic>> compositeRow) {
+    if (compositeRow == null) return null;
+    final Map<String, dynamic> map = compositeRow.values.single;
     final EntityDetail object = new EntityDetail();
     object.entityId = map['entity_id'] as int;
     object.detailId = map['detail_id'] as int;
@@ -246,7 +244,7 @@ abstract class EntityDetailTable {
 
   /// Insert a row into entity_detail.
   static Future<int> create(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     EntityDetail entityDetail, {
     String schema,
     String table,
@@ -270,7 +268,7 @@ abstract class EntityDetailTable {
 
   /// Read a row from entity_detail.
   static Future<EntityDetail> read(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     int entityId,
     int detailId, {
     String schema,
@@ -281,7 +279,7 @@ abstract class EntityDetailTable {
   }) async {
     assert(entityId != null);
     assert(detailId != null);
-    final pg.Row _row = await new _owl_sql_pg.SimpleSelect(
+    final _row = await new _owl_sql_pg.SimpleSelect(
             schema: schema,
             table: table ?? 'entity_detail',
             columns: columns,
@@ -297,7 +295,7 @@ abstract class EntityDetailTable {
 
   /// Update a row in entity_detail.
   static Future<int> update(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     EntityDetail entityDetail, {
     String schema,
     String table,
@@ -320,7 +318,7 @@ abstract class EntityDetailTable {
 
   /// Delete a row from entity_detail.
   static Future<int> delete(
-    pg.Connection connection,
+    pg.PostgreSQLExecutionContext connection,
     int entityId,
     int detailId, {
     String schema,
