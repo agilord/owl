@@ -86,8 +86,9 @@ class JsonGenerator extends Generator {
             "?.cast<${field.baseType}>()"
             "?.toList()";
       } else if (field.parserFn != null) {
-        parse =
-            "${field.parserFn}(map['${field.keyName}'] as Map<String, dynamic>)";
+        final skipAsMap = field.parserFn.startsWith('_owl_json');
+        final asMap = skipAsMap ? '' : ' as Map<String, dynamic>';
+        parse = "${field.parserFn}(map['${field.keyName}']$asMap)";
       } else {
         parse = "map['${field.keyName}']";
         if (isNativeJson(field.baseType)) {

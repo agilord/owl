@@ -43,8 +43,8 @@ abstract class EntityMapper {
 
     // ignore: avoid_as
     object.intList = (map['intList'] as List)?.cast<int>()?.toList();
-    object.dateTimeProperty = _owl_json.DateTimeMapper.parse(
-        map['dateTimeProperty'] as Map<String, dynamic>);
+    object.dateTimeProperty =
+        _owl_json.DateTimeMapper.parse(map['dateTimeProperty']);
 
     // ignore: avoid_as
     object.dateTimeList = (map['dateTimeList'] as List<dynamic>)

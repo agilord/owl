@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.4.0+1
+
+- Fix DateTime parser.
+
 # 0.4.0
 
 - Upgraded to Dart 2 only.
