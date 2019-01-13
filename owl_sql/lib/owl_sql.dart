@@ -24,6 +24,7 @@ class Column {
 abstract class SqlType {
   static const String boolean = 'BOOLEAN';
   static const String bigint = 'BIGINT';
+  static const String smallint = 'SMALLINT';
   // static const String numeric = 'NUMERIC';
   static const String double = 'DOUBLE';
   static const String text = 'TEXT';

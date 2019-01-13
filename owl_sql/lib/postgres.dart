@@ -354,6 +354,7 @@ class _Codegen {
       case SqlType.boolean:
         return 'bool';
       case SqlType.bigint:
+      case SqlType.smallint:
         return 'int';
       case SqlType.double:
         return 'double';

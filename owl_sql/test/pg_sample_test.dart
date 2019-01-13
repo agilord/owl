@@ -29,6 +29,7 @@ Future main() async {
           new SampleRow(
             textCol: 'id-value',
             bigintCol: 1 << 62,
+            smallintCol: -135,
             booleanCol: true,
             byteaCol: <int>[1, 6, 9, 10],
             doubleCol: 4.5,
@@ -48,6 +49,7 @@ Future main() async {
       final row = await table.read(conn, 'id-value');
       expect(row.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
+      expect(row.smallintCol, -135);
       expect(row.booleanCol, true);
       expect(row.byteaCol, [1, 6, 9, 10]);
       expect(row.doubleCol, 4.5);
@@ -67,6 +69,8 @@ Future main() async {
 
       await run(new SampleFilter()..bigintCol$equalsTo(4611686018427387904));
       await run(new SampleFilter()..bigintCol$greaterThan(4611686018427387903));
+      await run(new SampleFilter()..smallintCol$equalsTo(-135));
+      await run(new SampleFilter()..smallintCol$lessThan(-134));
       await run(new SampleFilter()..booleanCol$equalsTo(true));
       await run(new SampleFilter()..byteaCol$greaterThan([1, 1]));
       await run(new SampleFilter()..doubleCol$greaterThan(4.4));
@@ -82,6 +86,7 @@ Future main() async {
           conn,
           'id-value',
           new SampleUpdate()
+            ..smallintCol(135)
             ..byteaCol([2, 3])
             ..jsonbCol({'x': 1})
             ..timestampCol(new DateTime(2002, 02, 03, 04, 05, 06).toUtc())
@@ -92,6 +97,7 @@ Future main() async {
       final row = await table.read(conn, 'id-value');
       expect(row.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
+      expect(row.smallintCol, 135);
       expect(row.booleanCol, true);
       expect(row.byteaCol, [2, 3]);
       expect(row.doubleCol, 4.5);

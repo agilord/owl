@@ -52,6 +52,7 @@ void main() {
           new Column('boolean_col', SqlType.boolean),
           new Column('double_col', SqlType.double),
           new Column('bigint_col', SqlType.bigint),
+          new Column('smallint_col', SqlType.smallint),
           new Column('uuid_col', SqlType.uuid),
           new Column('timestamp_col', SqlType.timestamp),
           new Column('jsonb_col', SqlType.jsonb),

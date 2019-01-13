@@ -12,6 +12,7 @@ class SampleColumn {
   static const String booleanCol = 'boolean_col';
   static const String doubleCol = 'double_col';
   static const String bigintCol = 'bigint_col';
+  static const String smallintCol = 'smallint_col';
   static const String uuidCol = 'uuid_col';
   static const String timestampCol = 'timestamp_col';
   static const String jsonbCol = 'jsonb_col';
@@ -22,6 +23,7 @@ class SampleColumn {
     SampleColumn.booleanCol,
     SampleColumn.doubleCol,
     SampleColumn.bigintCol,
+    SampleColumn.smallintCol,
     SampleColumn.uuidCol,
     SampleColumn.timestampCol,
     SampleColumn.jsonbCol,
@@ -36,6 +38,7 @@ class SampleColumn {
     SampleColumn.booleanCol,
     SampleColumn.doubleCol,
     SampleColumn.bigintCol,
+    SampleColumn.smallintCol,
     SampleColumn.uuidCol,
     SampleColumn.timestampCol,
     SampleColumn.jsonbCol,
@@ -75,6 +78,7 @@ class SampleRow {
   final bool booleanCol;
   final double doubleCol;
   final int bigintCol;
+  final int smallintCol;
   final String uuidCol;
   final DateTime timestampCol;
   final Map<String, dynamic> jsonbCol;
@@ -85,6 +89,7 @@ class SampleRow {
     this.booleanCol,
     this.doubleCol,
     this.bigintCol,
+    this.smallintCol,
     this.uuidCol,
     this.timestampCol,
     this.jsonbCol,
@@ -100,9 +105,10 @@ class SampleRow {
         booleanCol: row[2] as bool,
         doubleCol: row[3] as double,
         bigintCol: row[4] as int,
-        uuidCol: row[5] as String,
-        timestampCol: row[6] as DateTime,
-        jsonbCol: row[7] as Map<String, dynamic>,
+        smallintCol: row[5] as int,
+        uuidCol: row[6] as String,
+        timestampCol: row[7] as DateTime,
+        jsonbCol: row[8] as Map<String, dynamic>,
       );
     }
     final int $textCol = columns.indexOf(SampleColumn.textCol);
@@ -110,6 +116,7 @@ class SampleRow {
     final int $booleanCol = columns.indexOf(SampleColumn.booleanCol);
     final int $doubleCol = columns.indexOf(SampleColumn.doubleCol);
     final int $bigintCol = columns.indexOf(SampleColumn.bigintCol);
+    final int $smallintCol = columns.indexOf(SampleColumn.smallintCol);
     final int $uuidCol = columns.indexOf(SampleColumn.uuidCol);
     final int $timestampCol = columns.indexOf(SampleColumn.timestampCol);
     final int $jsonbCol = columns.indexOf(SampleColumn.jsonbCol);
@@ -119,6 +126,7 @@ class SampleRow {
       booleanCol: $booleanCol == -1 ? null : row[$booleanCol] as bool,
       doubleCol: $doubleCol == -1 ? null : row[$doubleCol] as double,
       bigintCol: $bigintCol == -1 ? null : row[$bigintCol] as int,
+      smallintCol: $smallintCol == -1 ? null : row[$smallintCol] as int,
       uuidCol: $uuidCol == -1 ? null : row[$uuidCol] as String,
       timestampCol: $timestampCol == -1 ? null : row[$timestampCol] as DateTime,
       jsonbCol: $jsonbCol == -1 ? null : row[$jsonbCol] as Map<String, dynamic>,
@@ -144,6 +152,7 @@ class SampleRow {
       booleanCol: map[SampleColumn.booleanCol] as bool,
       doubleCol: map[SampleColumn.doubleCol] as double,
       bigintCol: map[SampleColumn.bigintCol] as int,
+      smallintCol: map[SampleColumn.smallintCol] as int,
       uuidCol: map[SampleColumn.uuidCol] as String,
       timestampCol: map[SampleColumn.timestampCol] as DateTime,
       jsonbCol: map[SampleColumn.jsonbCol] as Map<String, dynamic>,
@@ -157,6 +166,7 @@ class SampleRow {
       'booleanCol': booleanCol,
       'doubleCol': doubleCol,
       'bigintCol': bigintCol,
+      'smallintCol': smallintCol,
       'uuidCol': uuidCol,
       'timestampCol': timestampCol?.toIso8601String(),
       'jsonbCol': jsonbCol,
@@ -174,6 +184,7 @@ class SampleRow {
       'boolean_col': booleanCol,
       'double_col': doubleCol,
       'bigint_col': bigintCol,
+      'smallint_col': smallintCol,
       'uuid_col': uuidCol,
       'timestamp_col': timestampCol?.toIso8601String(),
       'jsonb_col': jsonbCol,
@@ -410,6 +421,44 @@ class SampleFilter {
     $expressions.add('"bigint_col" <= @$key');
   }
 
+  void smallintCol$equalsTo(int value) {
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" = @$key');
+  }
+
+  void smallintCol$isNull() {
+    $expressions.add('"smallint_col" IS NULL');
+  }
+
+  void smallintCol$isNotNull() {
+    $expressions.add('"smallint_col" IS NOT NULL');
+  }
+
+  void smallintCol$greaterThan(int value) {
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" > @$key');
+  }
+
+  void smallintCol$greaterThanOrEqualTo(int value) {
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" >= @$key');
+  }
+
+  void smallintCol$lessThan(int value) {
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" < @$key');
+  }
+
+  void smallintCol$lessThanOrEqualTo(int value) {
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" <= @$key');
+  }
+
   void uuidCol$equalsTo(String value) {
     final key = _next();
     $params[key] = value;
@@ -578,6 +627,21 @@ class SampleUpdate {
     $expressions.add('"bigint_col" = $expr');
   }
 
+  void smallintCol(int value) {
+    if (value == null) return;
+    final key = _next();
+    $params[key] = value;
+    $expressions.add('"smallint_col" = @$key');
+  }
+
+  void smallintCol$null() {
+    $expressions.add('"smallint_col" = NULL');
+  }
+
+  void smallintCol$expr(String expr) {
+    $expressions.add('"smallint_col" = $expr');
+  }
+
   void uuidCol(String value) {
     if (value == null) return;
     final key = _next();
@@ -634,7 +698,7 @@ class SampleTable {
 
   Future init(PostgreSQLExecutionContext conn) async {
     await conn.execute(
-        """CREATE TABLE IF NOT EXISTS $fqn ("text_col" TEXT, "bytea_col" BYTEA, "boolean_col" BOOLEAN, "double_col" DOUBLE PRECISION, "bigint_col" BIGINT, "uuid_col" UUID, "timestamp_col" TIMESTAMP, "jsonb_col" JSONB, PRIMARY KEY ("text_col"));""");
+        """CREATE TABLE IF NOT EXISTS $fqn ("text_col" TEXT, "bytea_col" BYTEA, "boolean_col" BOOLEAN, "double_col" DOUBLE PRECISION, "bigint_col" BIGINT, "smallint_col" SMALLINT, "uuid_col" UUID, "timestamp_col" TIMESTAMP, "jsonb_col" JSONB, PRIMARY KEY ("text_col"));""");
     await conn.execute(
         """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bytea_col" BYTEA;""");
     await conn.execute(
@@ -643,6 +707,8 @@ class SampleTable {
         """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "double_col" DOUBLE PRECISION;""");
     await conn.execute(
         """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bigint_col" BIGINT;""");
+    await conn.execute(
+        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "smallint_col" SMALLINT;""");
     await conn.execute(
         """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "uuid_col" UUID;""");
     await conn.execute(
