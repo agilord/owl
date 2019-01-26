@@ -435,12 +435,13 @@ class TextTable {
     return deleteAll(conn, new TextFilter()..primaryKeys(id));
   }
 
-  Future<int> deleteAll(
-      PostgreSQLExecutionContext conn, TextFilter filter) async {
+  Future<int> deleteAll(PostgreSQLExecutionContext conn, TextFilter filter,
+      {int limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
-    return conn.execute('DELETE FROM $fqn $whereQ',
+    final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
+    return conn.execute('DELETE FROM $fqn $whereQ$limitQ',
         substitutionValues: filter?.$params);
   }
 }

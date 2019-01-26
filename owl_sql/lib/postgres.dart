@@ -648,11 +648,13 @@ class _Codegen {
 
   void _writeTableDeleteAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> deleteAll(PostgreSQLExecutionContext conn, ${table.type}Filter filter) async {');
+        '\n  Future<int> deleteAll(PostgreSQLExecutionContext conn, ${table.type}Filter filter, {int limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
-        '    return conn.execute(\'DELETE FROM \$fqn \$whereQ\', substitutionValues: filter?.\$params);');
+        '    final limitQ = (limit == null || limit == 0) ? \'\' : \' LIMIT \$limit\';');
+    _sb.writeln(
+        '    return conn.execute(\'DELETE FROM \$fqn \$whereQ\$limitQ\', substitutionValues: filter?.\$params);');
     _sb.writeln('  }');
   }
 

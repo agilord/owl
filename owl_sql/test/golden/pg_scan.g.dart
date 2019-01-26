@@ -558,12 +558,13 @@ class ScanTable {
     return deleteAll(conn, new ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
-  Future<int> deleteAll(
-      PostgreSQLExecutionContext conn, ScanFilter filter) async {
+  Future<int> deleteAll(PostgreSQLExecutionContext conn, ScanFilter filter,
+      {int limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
-    return conn.execute('DELETE FROM $fqn $whereQ',
+    final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
+    return conn.execute('DELETE FROM $fqn $whereQ$limitQ',
         substitutionValues: filter?.$params);
   }
 }
