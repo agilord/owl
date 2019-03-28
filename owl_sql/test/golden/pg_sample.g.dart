@@ -818,17 +818,15 @@ class SampleTable {
         filter: new SampleFilter()..primaryKeys(textCol));
   }
 
-  Future<int> updateAll(
-    PostgreSQLExecutionContext conn,
-    SampleUpdate update, {
-    SampleFilter filter,
-  }) async {
+  Future<int> updateAll(PostgreSQLExecutionContext conn, SampleUpdate update,
+      {SampleFilter filter, int limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
     final params = new Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
-    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ',
+    final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
+    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
         substitutionValues: params);
   }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.6.3
+
+- Support `limit` with `*Table.updateAll`.
+
 # 0.6.2
 
 - Support `limit` with `*Table.deleteAll`.

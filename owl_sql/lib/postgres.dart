@@ -620,13 +620,15 @@ class _Codegen {
 
   void _writeTableUpdateAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> updateAll(PostgreSQLExecutionContext conn, ${table.type}Update update, {${table.type}Filter filter,}) async {');
+        '\n  Future<int> updateAll(PostgreSQLExecutionContext conn, ${table.type}Update update, {${table.type}Filter filter, int limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
         '    final params = new Map<String, dynamic>.from(filter?.\$params ?? {})..addAll(update.\$params);');
     _sb.writeln(
-        '    return conn.execute(\'UPDATE \$fqn SET \${update.join()} \$whereQ\', substitutionValues: params);');
+        '    final limitQ = (limit == null || limit == 0) ? \'\' : \' LIMIT \$limit\';');
+    _sb.writeln(
+        '    return conn.execute(\'UPDATE \$fqn SET \${update.join()} \$whereQ\$limitQ\', substitutionValues: params);');
     _sb.writeln('  }');
   }
 

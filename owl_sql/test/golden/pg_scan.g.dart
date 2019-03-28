@@ -539,17 +539,15 @@ class ScanTable {
         filter: new ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
-  Future<int> updateAll(
-    PostgreSQLExecutionContext conn,
-    ScanUpdate update, {
-    ScanFilter filter,
-  }) async {
+  Future<int> updateAll(PostgreSQLExecutionContext conn, ScanUpdate update,
+      {ScanFilter filter, int limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
     final params = new Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
-    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ',
+    final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
+    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
         substitutionValues: params);
   }
 
