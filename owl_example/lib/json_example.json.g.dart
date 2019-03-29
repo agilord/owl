@@ -67,7 +67,7 @@ abstract class EntityMapper {
   /// Converts a JSON string to an instance of Entity.
   static Entity fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = convert.json.decoder.convert(json);
+    final map = convert.json.decoder.convert(json) as Map<String, dynamic>;
     return parse(map);
   }
 
@@ -108,7 +108,7 @@ abstract class ChildClassMapper {
   /// Converts a JSON string to an instance of ChildClass.
   static ChildClass fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = convert.json.decoder.convert(json);
+    final map = convert.json.decoder.convert(json) as Map<String, dynamic>;
     return parse(map);
   }
 
@@ -142,7 +142,7 @@ abstract class WithEqualsAndHashMapper {
   /// Converts a JSON string to an instance of WithEqualsAndHash.
   static WithEqualsAndHash fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = convert.json.decoder.convert(json);
+    final map = convert.json.decoder.convert(json) as Map<String, dynamic>;
     return parse(map);
   }
 

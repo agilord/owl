@@ -162,7 +162,7 @@ class Id implements Comparable<Id> {
   int compareTo(Id other) => id.compareTo(other.id);
 
   static Id fromJson(String json) {
-    Map jsonMap = convert.json.decode(json);
+    final jsonMap = convert.json.decode(json) as Map;
     return fromJsonMap(jsonMap);
   }
 

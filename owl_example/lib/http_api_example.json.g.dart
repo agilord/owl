@@ -37,7 +37,7 @@ abstract class ArticleMapper {
   /// Converts a JSON string to an instance of Article.
   static Article fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = convert.json.decoder.convert(json);
+    final map = convert.json.decoder.convert(json) as Map<String, dynamic>;
     return parse(map);
   }
 
@@ -71,7 +71,7 @@ abstract class StatusMapper {
   /// Converts a JSON string to an instance of Status.
   static Status fromJson(String json) {
     if (json == null || json.isEmpty) return null;
-    final Map<String, dynamic> map = convert.json.decoder.convert(json);
+    final map = convert.json.decoder.convert(json) as Map<String, dynamic>;
     return parse(map);
   }
 
