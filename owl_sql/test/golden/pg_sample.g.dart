@@ -17,7 +17,7 @@ class SampleColumn {
   static const String timestampCol = 'timestamp_col';
   static const String jsonbCol = 'jsonb_col';
 
-  static const List<String> $all = const <String>[
+  static const List<String> $all = <String>[
     SampleColumn.textCol,
     SampleColumn.byteaCol,
     SampleColumn.booleanCol,
@@ -29,11 +29,11 @@ class SampleColumn {
     SampleColumn.jsonbCol,
   ];
 
-  static const List<String> $keys = const <String>[
+  static const List<String> $keys = <String>[
     SampleColumn.textCol,
   ];
 
-  static const List<String> $nonKeys = const <String>[
+  static const List<String> $nonKeys = <String>[
     SampleColumn.byteaCol,
     SampleColumn.booleanCol,
     SampleColumn.doubleCol,
@@ -44,15 +44,15 @@ class SampleColumn {
     SampleColumn.jsonbCol,
   ];
 
-  static const List<String> $jsonb = const <String>[
+  static const List<String> $jsonb = <String>[
     SampleColumn.jsonbCol,
   ];
 
-  static const List<String> $bytea = const <String>[
+  static const List<String> $bytea = <String>[
     SampleColumn.byteaCol,
   ];
 
-  static const List<String> $tsvector = const <String>[];
+  static const List<String> $tsvector = <String>[];
 }
 
 /// Unique continuity position for Sample tables.
@@ -99,7 +99,7 @@ class SampleRow {
     columns ??= SampleColumn.$all;
     assert(row.length == columns.length);
     if (columns == SampleColumn.$all) {
-      return new SampleRow(
+      return SampleRow(
         textCol: row[0] as String,
         byteaCol: row[1] as List<int>,
         booleanCol: row[2] as bool,
@@ -120,7 +120,7 @@ class SampleRow {
     final int $uuidCol = columns.indexOf(SampleColumn.uuidCol);
     final int $timestampCol = columns.indexOf(SampleColumn.timestampCol);
     final int $jsonbCol = columns.indexOf(SampleColumn.jsonbCol);
-    return new SampleRow(
+    return SampleRow(
       textCol: $textCol == -1 ? null : row[$textCol] as String,
       byteaCol: $byteaCol == -1 ? null : row[$byteaCol] as List<int>,
       booleanCol: $booleanCol == -1 ? null : row[$booleanCol] as bool,
@@ -140,13 +140,13 @@ class SampleRow {
       if (row.length == 1) {
         table = row.keys.first;
       } else {
-        throw new StateError(
+        throw StateError(
             'Unable to lookup table prefix: $table of ${row.keys}');
       }
     }
     final map = row[table];
     if (map == null) return null;
-    return new SampleRow(
+    return SampleRow(
       textCol: map[SampleColumn.textCol] as String,
       byteaCol: map[SampleColumn.byteaCol] as List<int>,
       booleanCol: map[SampleColumn.booleanCol] as bool,
@@ -159,7 +159,7 @@ class SampleRow {
     );
   }
 
-  Map<String, dynamic> toFieldMap({bool removeNulls: false}) {
+  Map<String, dynamic> toFieldMap({bool removeNulls = false}) {
     final $map = {
       'textCol': textCol,
       'byteaCol': byteaCol,
@@ -177,7 +177,7 @@ class SampleRow {
     return $map;
   }
 
-  Map<String, dynamic> toColumnMap({bool removeNulls: false}) {
+  Map<String, dynamic> toColumnMap({bool removeNulls = false}) {
     final $map = {
       'text_col': textCol,
       'bytea_col': byteaCol,
@@ -195,7 +195,7 @@ class SampleRow {
     return $map;
   }
 
-  SampleKey toKey() => new SampleKey(
+  SampleKey toKey() => SampleKey(
         textCol: textCol,
       );
 }
@@ -207,14 +207,14 @@ class SampleFilter {
   int _cnt = 0;
 
   SampleFilter clone() {
-    return new SampleFilter()
+    return SampleFilter()
       ..$params.addAll($params)
       ..$expressions.addAll($expressions)
       .._cnt = _cnt;
   }
 
   void primaryKeys(String textCol) {
-    this.textCol$equalsTo(textCol);
+    textCol$equalsTo(textCol);
   }
 
   String $join(String op) => $expressions.map((s) => '($s)').join(op);
@@ -694,7 +694,7 @@ class SampleTable {
   final String fqn;
 
   SampleTable(this.name, {this.schema})
-      : this.fqn = schema == null ? '"$name"' : '"$schema"."$name"';
+      : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
     await conn.execute(
@@ -720,7 +720,7 @@ class SampleTable {
   Future<SampleRow> read(PostgreSQLExecutionContext conn, String textCol,
       {List<String> columns}) async {
     columns ??= SampleColumn.$all;
-    final filter = new SampleFilter()..primaryKeys(textCol);
+    final filter = SampleFilter()..primaryKeys(textCol);
     final list = await query(conn, columns: columns, limit: 2, filter: filter);
     if (list.isEmpty) return null;
     return list.single;
@@ -749,24 +749,24 @@ class SampleTable {
     final list = await conn.mappedResultsQuery(
         'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr',
         substitutionValues: filter?.$params);
-    return list.map((row) => new SampleRow.fromRowMap(row)).toList();
+    return list.map((row) => SampleRow.fromRowMap(row)).toList();
   }
 
   Future<Page<SampleRow>> paginate(
-    SampleConnectionFn fn, {
-    int pageSize: 100,
+    PostgreSQLExecutionContext c, {
+    int pageSize = 100,
     List<String> columns,
     SampleFilter filter,
     SampleKey startAfter,
   }) async {
     final List<String> fixedColumns =
-        columns == null ? null : new List<String>.from(columns);
+        columns == null ? null : List<String>.from(columns);
     if (fixedColumns != null) {
       if (!fixedColumns.contains(SampleColumn.textCol)) {
         fixedColumns.add(SampleColumn.textCol);
       }
     }
-    final page = new SamplePage._(null, false, fn, this, pageSize, fixedColumns,
+    final page = SamplePage._(null, false, c, this, pageSize, fixedColumns,
         filter?.clone(), startAfter);
     return await page.next();
   }
@@ -815,7 +815,7 @@ class SampleTable {
   Future<int> update(
       PostgreSQLExecutionContext conn, String textCol, SampleUpdate update) {
     return updateAll(conn, update,
-        filter: new SampleFilter()..primaryKeys(textCol));
+        filter: SampleFilter()..primaryKeys(textCol));
   }
 
   Future<int> updateAll(PostgreSQLExecutionContext conn, SampleUpdate update,
@@ -823,7 +823,7 @@ class SampleTable {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
-    final params = new Map<String, dynamic>.from(filter?.$params ?? {})
+    final params = Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
     return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
@@ -831,7 +831,7 @@ class SampleTable {
   }
 
   Future<int> delete(PostgreSQLExecutionContext conn, String textCol) {
-    return deleteAll(conn, new SampleFilter()..primaryKeys(textCol));
+    return deleteAll(conn, SampleFilter()..primaryKeys(textCol));
   }
 
   Future<int> deleteAll(PostgreSQLExecutionContext conn, SampleFilter filter,
@@ -845,47 +845,41 @@ class SampleTable {
   }
 }
 
-typedef Future<R> SampleConnectionFn<R>(
-    Future<R> fn(PostgreSQLExecutionContext c));
-
 class SamplePage extends Object with PageMixin<SampleRow> {
   @override
   final bool isLast;
   @override
   final List<SampleRow> items;
-  final SampleConnectionFn _fn;
+  final PostgreSQLExecutionContext _c;
   final SampleTable _table;
   final int _limit;
   final List<String> _columns;
   final SampleFilter _filter;
   final SampleKey _startAfter;
 
-  SamplePage._(this.items, this.isLast, this._fn, this._table, this._limit,
+  SamplePage._(this.items, this.isLast, this._c, this._table, this._limit,
       this._columns, this._filter, this._startAfter);
 
   @override
   Future<Page<SampleRow>> next() async {
     if (isLast) return null;
-    final filter = _filter?.clone() ?? new SampleFilter();
+    final filter = _filter?.clone() ?? SampleFilter();
     if (items != null) {
       filter.keyAfter(items.last.toKey());
     } else if (_startAfter != null) {
       filter.keyAfter(_startAfter);
     }
-    final rs = await _fn((c) async {
-      final rows = await _table.query(c,
-          columns: _columns,
-          filter: filter,
-          limit: _limit + 1,
-          orderBy: [
-            SampleColumn.textCol,
-          ]);
-      final nextLast = rows.length <= _limit;
-      final nextRows = nextLast ? rows : rows.sublist(0, _limit);
-      return new SamplePage._(
-          nextRows, nextLast, _fn, _table, _limit, _columns, _filter, null);
-    });
-    return rs as Page<SampleRow>;
+    final rows = await _table.query(_c,
+        columns: _columns,
+        filter: filter,
+        limit: _limit + 1,
+        orderBy: [
+          SampleColumn.textCol,
+        ]);
+    final nextLast = rows.length <= _limit;
+    final nextRows = nextLast ? rows : rows.sublist(0, _limit);
+    return SamplePage._(
+        nextRows, nextLast, _c, _table, _limit, _columns, _filter, null);
   }
 
   @override

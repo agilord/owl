@@ -1,5 +1,17 @@
 # Changelog
 
+# 0.7.0
+
+**Breaking changes**:
+
+- Dart 2.2 compatible code (incl. using the optional `new` initialization).
+- `${table.type}ConnectionFn` removed
+- `Table.paginate` uses `PostgreSQLExecutionContext` (e.g. `Connection` or a pooling proxy).
+
+**Updates**:
+- Import package with prefixes.
+- Additional mutable (non-database) fields for `Row` objects. 
+
 # 0.6.3
 
 - Support `limit` with `*Table.updateAll`.

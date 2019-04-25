@@ -1,3 +1,5 @@
+include: package:pedantic/analysis_options.yaml
+
 #   https://www.dartlang.org/guides/language/analysis-options
 analyzer:
   strong-mode:
@@ -42,13 +44,18 @@ linter:
     - prefer_final_locals
     - prefer_is_not_empty
     - slash_for_doc_comments
-    - super_goes_last
     - test_types_in_equals
     - throw_in_finally
 #    - type_annotate_public_apis
     - type_init_formals
     - unawaited_futures
     - unnecessary_brace_in_string_interps
+    - unnecessary_const
     - unnecessary_getters_setters
+    - unnecessary_lambdas
+    - unnecessary_new
+    - unnecessary_null_aware_assignments
+    - unnecessary_statements
+    - unnecessary_this
     - unrelated_type_equality_checks
     - valid_regexps

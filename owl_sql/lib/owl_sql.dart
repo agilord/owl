@@ -4,9 +4,10 @@ import 'src/text.dart';
 class Table {
   final String type;
   final List<Column> columns;
+  final List<Field> fields;
   final List<Index> indexes;
 
-  Table(this.type, this.columns, {this.indexes});
+  Table(this.type, this.columns, {this.fields, this.indexes});
 }
 
 /// Column of a [Table].
@@ -35,6 +36,14 @@ abstract class SqlType {
   static const String tsvector = 'TSVECTOR';
 }
 
+/// Non-persisted field added to the `Row` object.
+class Field {
+  final String name;
+  final String type;
+
+  Field(this.name, this.type);
+}
+
 /// Index of a [Table].
 class Index {
   final String nameSuffix;
@@ -44,5 +53,5 @@ class Index {
   /// CockroachDB-only field which stores the listed column values alongside the index.
   final List<String> storing;
 
-  Index(this.nameSuffix, this.columns, {this.isInverted: false, this.storing});
+  Index(this.nameSuffix, this.columns, {this.isInverted = false, this.storing});
 }

@@ -12,31 +12,31 @@ class ScanColumn {
   static const String id3 = 'id3';
   static const String payload = 'payload';
 
-  static const List<String> $all = const <String>[
+  static const List<String> $all = <String>[
     ScanColumn.id1,
     ScanColumn.id2,
     ScanColumn.id3,
     ScanColumn.payload,
   ];
 
-  static const List<String> $keys = const <String>[
+  static const List<String> $keys = <String>[
     ScanColumn.id1,
     ScanColumn.id2,
     ScanColumn.id3,
   ];
 
-  static const List<String> $nonKeys = const <String>[
+  static const List<String> $nonKeys = <String>[
     ScanColumn.payload,
   ];
 
-  static const List<String> $jsonb = const <String>[];
+  static const List<String> $jsonb = <String>[];
 
-  static const List<String> $bytea = const <String>[
+  static const List<String> $bytea = <String>[
     ScanColumn.id2,
     ScanColumn.payload,
   ];
 
-  static const List<String> $tsvector = const <String>[];
+  static const List<String> $tsvector = <String>[];
 }
 
 /// Unique continuity position for Scan tables.
@@ -85,7 +85,7 @@ class ScanRow {
     columns ??= ScanColumn.$all;
     assert(row.length == columns.length);
     if (columns == ScanColumn.$all) {
-      return new ScanRow(
+      return ScanRow(
         id1: row[0] as String,
         id2: row[1] as List<int>,
         id3: row[2] as String,
@@ -96,7 +96,7 @@ class ScanRow {
     final int $id2 = columns.indexOf(ScanColumn.id2);
     final int $id3 = columns.indexOf(ScanColumn.id3);
     final int $payload = columns.indexOf(ScanColumn.payload);
-    return new ScanRow(
+    return ScanRow(
       id1: $id1 == -1 ? null : row[$id1] as String,
       id2: $id2 == -1 ? null : row[$id2] as List<int>,
       id3: $id3 == -1 ? null : row[$id3] as String,
@@ -111,13 +111,13 @@ class ScanRow {
       if (row.length == 1) {
         table = row.keys.first;
       } else {
-        throw new StateError(
+        throw StateError(
             'Unable to lookup table prefix: $table of ${row.keys}');
       }
     }
     final map = row[table];
     if (map == null) return null;
-    return new ScanRow(
+    return ScanRow(
       id1: map[ScanColumn.id1] as String,
       id2: map[ScanColumn.id2] as List<int>,
       id3: map[ScanColumn.id3] as String,
@@ -125,7 +125,7 @@ class ScanRow {
     );
   }
 
-  Map<String, dynamic> toFieldMap({bool removeNulls: false}) {
+  Map<String, dynamic> toFieldMap({bool removeNulls = false}) {
     final $map = {
       'id1': id1,
       'id2': id2,
@@ -138,7 +138,7 @@ class ScanRow {
     return $map;
   }
 
-  Map<String, dynamic> toColumnMap({bool removeNulls: false}) {
+  Map<String, dynamic> toColumnMap({bool removeNulls = false}) {
     final $map = {
       'id1': id1,
       'id2': id2,
@@ -151,7 +151,7 @@ class ScanRow {
     return $map;
   }
 
-  ScanKey toKey() => new ScanKey(
+  ScanKey toKey() => ScanKey(
         id1: id1,
         id2: id2,
         id3: id3,
@@ -165,16 +165,16 @@ class ScanFilter {
   int _cnt = 0;
 
   ScanFilter clone() {
-    return new ScanFilter()
+    return ScanFilter()
       ..$params.addAll($params)
       ..$expressions.addAll($expressions)
       .._cnt = _cnt;
   }
 
   void primaryKeys(String id1, List<int> id2, String id3) {
-    this.id1$equalsTo(id1);
-    this.id2$equalsTo(id2);
-    this.id3$equalsTo(id3);
+    id1$equalsTo(id1);
+    id2$equalsTo(id2);
+    id3$equalsTo(id3);
   }
 
   String $join(String op) => $expressions.map((s) => '($s)').join(op);
@@ -426,7 +426,7 @@ class ScanTable {
   final String fqn;
 
   ScanTable(this.name, {this.schema})
-      : this.fqn = schema == null ? '"$name"' : '"$schema"."$name"';
+      : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
     await conn.execute(
@@ -439,7 +439,7 @@ class ScanTable {
       PostgreSQLExecutionContext conn, String id1, List<int> id2, String id3,
       {List<String> columns}) async {
     columns ??= ScanColumn.$all;
-    final filter = new ScanFilter()..primaryKeys(id1, id2, id3);
+    final filter = ScanFilter()..primaryKeys(id1, id2, id3);
     final list = await query(conn, columns: columns, limit: 2, filter: filter);
     if (list.isEmpty) return null;
     return list.single;
@@ -468,18 +468,18 @@ class ScanTable {
     final list = await conn.mappedResultsQuery(
         'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr',
         substitutionValues: filter?.$params);
-    return list.map((row) => new ScanRow.fromRowMap(row)).toList();
+    return list.map((row) => ScanRow.fromRowMap(row)).toList();
   }
 
   Future<Page<ScanRow>> paginate(
-    ScanConnectionFn fn, {
-    int pageSize: 100,
+    PostgreSQLExecutionContext c, {
+    int pageSize = 100,
     List<String> columns,
     ScanFilter filter,
     ScanKey startAfter,
   }) async {
     final List<String> fixedColumns =
-        columns == null ? null : new List<String>.from(columns);
+        columns == null ? null : List<String>.from(columns);
     if (fixedColumns != null) {
       if (!fixedColumns.contains(ScanColumn.id1)) {
         fixedColumns.add(ScanColumn.id1);
@@ -491,7 +491,7 @@ class ScanTable {
         fixedColumns.add(ScanColumn.id3);
       }
     }
-    final page = new ScanPage._(null, false, fn, this, pageSize, fixedColumns,
+    final page = ScanPage._(null, false, c, this, pageSize, fixedColumns,
         filter?.clone(), startAfter);
     return await page.next();
   }
@@ -536,7 +536,7 @@ class ScanTable {
   Future<int> update(PostgreSQLExecutionContext conn, String id1, List<int> id2,
       String id3, ScanUpdate update) {
     return updateAll(conn, update,
-        filter: new ScanFilter()..primaryKeys(id1, id2, id3));
+        filter: ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
   Future<int> updateAll(PostgreSQLExecutionContext conn, ScanUpdate update,
@@ -544,7 +544,7 @@ class ScanTable {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
-    final params = new Map<String, dynamic>.from(filter?.$params ?? {})
+    final params = Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
     return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
@@ -553,7 +553,7 @@ class ScanTable {
 
   Future<int> delete(
       PostgreSQLExecutionContext conn, String id1, List<int> id2, String id3) {
-    return deleteAll(conn, new ScanFilter()..primaryKeys(id1, id2, id3));
+    return deleteAll(conn, ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
   Future<int> deleteAll(PostgreSQLExecutionContext conn, ScanFilter filter,
@@ -567,49 +567,43 @@ class ScanTable {
   }
 }
 
-typedef Future<R> ScanConnectionFn<R>(
-    Future<R> fn(PostgreSQLExecutionContext c));
-
 class ScanPage extends Object with PageMixin<ScanRow> {
   @override
   final bool isLast;
   @override
   final List<ScanRow> items;
-  final ScanConnectionFn _fn;
+  final PostgreSQLExecutionContext _c;
   final ScanTable _table;
   final int _limit;
   final List<String> _columns;
   final ScanFilter _filter;
   final ScanKey _startAfter;
 
-  ScanPage._(this.items, this.isLast, this._fn, this._table, this._limit,
+  ScanPage._(this.items, this.isLast, this._c, this._table, this._limit,
       this._columns, this._filter, this._startAfter);
 
   @override
   Future<Page<ScanRow>> next() async {
     if (isLast) return null;
-    final filter = _filter?.clone() ?? new ScanFilter();
+    final filter = _filter?.clone() ?? ScanFilter();
     if (items != null) {
       filter.keyAfter(items.last.toKey());
     } else if (_startAfter != null) {
       filter.keyAfter(_startAfter);
     }
-    final rs = await _fn((c) async {
-      final rows = await _table.query(c,
-          columns: _columns,
-          filter: filter,
-          limit: _limit + 1,
-          orderBy: [
-            ScanColumn.id1,
-            ScanColumn.id2,
-            ScanColumn.id3,
-          ]);
-      final nextLast = rows.length <= _limit;
-      final nextRows = nextLast ? rows : rows.sublist(0, _limit);
-      return new ScanPage._(
-          nextRows, nextLast, _fn, _table, _limit, _columns, _filter, null);
-    });
-    return rs as Page<ScanRow>;
+    final rows = await _table.query(_c,
+        columns: _columns,
+        filter: filter,
+        limit: _limit + 1,
+        orderBy: [
+          ScanColumn.id1,
+          ScanColumn.id2,
+          ScanColumn.id3,
+        ]);
+    final nextLast = rows.length <= _limit;
+    final nextRows = nextLast ? rows : rows.sublist(0, _limit);
+    return ScanPage._(
+        nextRows, nextLast, _c, _table, _limit, _columns, _filter, null);
   }
 
   @override

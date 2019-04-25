@@ -8,15 +8,11 @@ import 'golden/pg_scan.g.dart';
 Future main() async {
   group('pg_scan', () {
     PostgreSQLConnection conn;
-    final table = new ScanTable('stbl', schema: 'test_scan');
-
-    Future<R> connFn<R>(Future<R> fn(PostgreSQLExecutionContext c)) async {
-      return await fn(conn);
-    }
+    final table = ScanTable('stbl', schema: 'test_scan');
 
     setUpAll(() async {
       // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = new PostgreSQLConnection('localhost', 5432, 'postgres',
+      conn = PostgreSQLConnection('localhost', 5432, 'postgres',
           username: 'postgres', password: 'postgres');
       await conn.open();
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_scan;');
@@ -34,7 +30,7 @@ Future main() async {
         for (int j = 0; j < 20; j++) {
           final id2 = <int>[j ~/ 10, j % 10];
           for (int k = 0; k < 20; k++) {
-            rows.add(new ScanRow(
+            rows.add(ScanRow(
               id1: id1,
               id2: id2,
               id3: k.toString().padLeft(2, '0'),
@@ -54,7 +50,7 @@ Future main() async {
     });
 
     test('paginate without filter', () async {
-      final page = await table.paginate(connFn, pageSize: 71);
+      final page = await table.paginate(conn, pageSize: 71);
       final list = await page.asStream().toList();
       expect(list, hasLength(8000));
       final row = list.firstWhere((r) =>
@@ -67,7 +63,7 @@ Future main() async {
     });
 
     test('paginate without all columns', () async {
-      final page = await table.paginate(connFn, pageSize: 71, columns: []);
+      final page = await table.paginate(conn, pageSize: 71, columns: []);
       final list = await page.asStream().toList();
       expect(list, hasLength(8000));
       final row = list.firstWhere((r) =>
@@ -80,8 +76,8 @@ Future main() async {
     });
 
     test('paginate with filter', () async {
-      final page = await table.paginate(connFn,
-          pageSize: 11, filter: new ScanFilter()..id2$equalsTo([0, 4]));
+      final page = await table.paginate(conn,
+          pageSize: 11, filter: ScanFilter()..id2$equalsTo([0, 4]));
       final list = await page.asStream().toList();
       expect(list, hasLength(400));
       final row = list.firstWhere((r) =>

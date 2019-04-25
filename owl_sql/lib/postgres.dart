@@ -9,30 +9,39 @@ export 'owl_sql.dart';
 Future<bool> writeInto(
   List<Table> tables,
   String targetFile, {
-  bool targetCockroachDB: false,
-  bool format: true,
+  Map<String, String> imports,
+  bool targetCockroachDB = false,
+  bool format = true,
 }) async {
   return await writeIntoFile(
       tables,
-      new File(targetFile),
-      (List<Table> items) =>
-          generateSource(items, targetCockroachDB: targetCockroachDB),
+      File(targetFile),
+      (List<Table> items) => generateSource(
+            items,
+            imports: imports,
+            targetCockroachDB: targetCockroachDB,
+          ),
       format);
 }
 
-String generateSource(List<Table> tables, {bool targetCockroachDB: false}) {
-  return new _Codegen(tables, targetCockroachDB).generate();
+String generateSource(
+  List<Table> tables, {
+  Map<String, String> imports,
+  bool targetCockroachDB = false,
+}) {
+  return _Codegen(tables, imports, targetCockroachDB).generate();
 }
 
 class _Codegen {
-  final _sb = new StringBuffer();
+  final _sb = StringBuffer();
   final List<Table> _tables;
+  final Map<String, String> _imports;
   final bool _targetCockroachDB;
   final bool _hasJsonb;
   final bool _hasBytea;
   final bool _hasTsvector;
 
-  _Codegen(List<Table> tables, this._targetCockroachDB)
+  _Codegen(List<Table> tables, this._imports, this._targetCockroachDB)
       : _tables = tables,
         _hasJsonb = tables
             .any((table) => table.columns.any((c) => c.type == SqlType.jsonb)),
@@ -42,14 +51,32 @@ class _Codegen {
             (table) => table.columns.any((c) => c.type == SqlType.tsvector));
 
   String generate() {
-    _sb.writeln('import \'dart:async\';');
+    final imports = ['import \'dart:async\';'];
     if (_hasJsonb || _hasBytea) {
-      _sb.writeln('import \'dart:convert\' as convert;');
+      imports.add('import \'dart:convert\' as convert;');
     }
+    imports.add('import \'package:meta/meta.dart\';');
+    imports.add('import \'package:page/page.dart\';');
+    imports.add('import \'package:postgres/postgres.dart\';');
+    _imports?.entries?.forEach((e) {
+      if (e.value == null) {
+        imports.add('import \'${e.key}\';');
+      } else {
+        imports.add('import \'${e.key}\' as ${e.value};');
+      }
+    });
+    imports.sort();
+    imports.where((s) => s.contains('\'dart:')).forEach(_sb.writeln);
     _sb.writeln();
-    _sb.writeln('import \'package:meta/meta.dart\';');
-    _sb.writeln('import \'package:page/page.dart\';');
-    _sb.writeln('import \'package:postgres/postgres.dart\';');
+    imports.where((s) => s.contains('\'package:')).forEach(_sb.writeln);
+    _sb.writeln();
+    final relatives = imports
+        .where((s) => !s.contains('\'dart:') && !s.contains('\'package:'))
+        .toList();
+    relatives.forEach(_sb.writeln);
+    if (relatives.isNotEmpty) {
+      _sb.writeln();
+    }
 
     for (Table table in _tables) {
       _writeSchema(table);
@@ -92,17 +119,16 @@ class _Codegen {
         .where((c) => c.type == SqlType.tsvector)
         .map((c) => '${table.type}Column.${c.fieldName},')
         .join();
-    _sb.writeln('\nstatic const List<String> \$all = const <String>[$cols];');
+    _sb.writeln('\nstatic const List<String> \$all = <String>[$cols];');
+    _sb.writeln('\nstatic const List<String> \$keys = <String>[$pkCols];');
     _sb.writeln(
-        '\nstatic const List<String> \$keys = const <String>[$pkCols];');
+        '\nstatic const List<String> \$nonKeys = <String>[$otherCols];');
     _sb.writeln(
-        '\nstatic const List<String> \$nonKeys = const <String>[$otherCols];');
+        '\nstatic const List<String> \$jsonb = <String>[$jsonbColumns];');
     _sb.writeln(
-        '\nstatic const List<String> \$jsonb = const <String>[$jsonbColumns];');
+        '\nstatic const List<String> \$bytea = <String>[$bytesColumns];');
     _sb.writeln(
-        '\nstatic const List<String> \$bytea = const <String>[$bytesColumns];');
-    _sb.writeln(
-        '\nstatic const List<String> \$tsvector = const <String>[$tsvectorColumns];');
+        '\nstatic const List<String> \$tsvector = <String>[$tsvectorColumns];');
     _sb.write('}\n');
   }
 
@@ -148,9 +174,15 @@ class _Codegen {
     for (Column col in table.columns) {
       _sb.write('final ${_toDartType(col.type)} ${col.fieldName};\n');
     }
+    for (Field field in table.fields ?? const []) {
+      _sb.writeln('${field.type} ${field.name};');
+    }
     _sb.write('\n  ${table.type}Row({\n');
     for (Column col in table.columns) {
       _sb.write('  this.${col.fieldName},\n');
+    }
+    for (Field field in table.fields ?? const []) {
+      _sb.writeln('  this.${field.name},');
     }
     _sb.writeln('  });');
 
@@ -164,7 +196,7 @@ class _Codegen {
       final rowExp = _transformToDart(c.type, 'row[${colIdx++}]');
       return '${c.fieldName}: $rowExp,';
     }).join('');
-    _sb.writeln('      return new ${table.type}Row($colX);');
+    _sb.writeln('      return ${table.type}Row($colX);');
     _sb.writeln('    }');
     for (Column col in table.columns) {
       _sb.writeln(
@@ -174,7 +206,7 @@ class _Codegen {
       final rowExp = _transformToDart(c.type, 'row[\$${c.fieldName}]');
       return '${c.fieldName}: \$${c.fieldName} == -1 ? null : $rowExp,';
     }).join('');
-    _sb.writeln('    return new ${table.type}Row($cols);');
+    _sb.writeln('    return ${table.type}Row($cols);');
     _sb.writeln('  }\n');
 
     _sb.writeln(
@@ -183,7 +215,7 @@ class _Codegen {
     _sb.writeln(
         '    if (table == null) {if (row.length == 1) {table = row.keys.first;} else {');
     _sb.writeln(
-        '    throw new StateError(\'Unable to lookup table prefix: \$table of \${row.keys}\');}}');
+        '    throw StateError(\'Unable to lookup table prefix: \$table of \${row.keys}\');}}');
     _sb.writeln('    final map = row[table];');
     _sb.writeln('    if (map == null) return null;');
     final colM = table.columns.map((c) {
@@ -191,11 +223,11 @@ class _Codegen {
           _transformToDart(c.type, 'map[${table.type}Column.${c.fieldName}]');
       return '${c.fieldName}: $colExpr,';
     }).join('');
-    _sb.writeln('    return new ${table.type}Row($colM);');
+    _sb.writeln('    return ${table.type}Row($colM);');
     _sb.writeln('  }\n');
 
     _sb.writeln(
-        '\n  Map<String, dynamic> toFieldMap({bool removeNulls: false}) {');
+        '\n  Map<String, dynamic> toFieldMap({bool removeNulls = false}) {');
     _sb.writeln('    final \$map = {');
     for (Column col in table.columns) {
       String expr = col.fieldName;
@@ -211,7 +243,7 @@ class _Codegen {
     _sb.writeln('    return \$map;');
     _sb.writeln('  }');
     _sb.writeln(
-        '\n  Map<String, dynamic> toColumnMap({bool removeNulls: false}) {');
+        '\n  Map<String, dynamic> toColumnMap({bool removeNulls = false}) {');
     _sb.writeln('    final \$map = {');
     for (Column col in table.columns) {
       String expr = col.fieldName;
@@ -228,7 +260,7 @@ class _Codegen {
     _sb.writeln('  }');
     _sb.writeln('\n  ${table.type}Key toKey() =>');
     _sb.writeln(
-        '    new ${table.type}Key(${pks.map((c) => '${c.fieldName}: ${c.fieldName},').join()});');
+        '    ${table.type}Key(${pks.map((c) => '${c.fieldName}: ${c.fieldName},').join()});');
     _sb.write('}\n');
   }
 
@@ -241,7 +273,7 @@ class _Codegen {
     _sb.writeln('  int _cnt = 0;');
 //    _sb.writeln('\n  ${table.type}Filter();');
     _sb.writeln('\n  ${table.type}Filter clone() {');
-    _sb.writeln('    return new ${table.type}Filter()');
+    _sb.writeln('    return ${table.type}Filter()');
     _sb.writeln('    ..\$params.addAll(\$params)');
     _sb.writeln('    ..\$expressions.addAll(\$expressions)');
     _sb.writeln('    .._cnt = _cnt;');
@@ -252,7 +284,7 @@ class _Codegen {
         .join(', ');
     final pksInit = table.columns
         .where((c) => c.isKey == true)
-        .map((c) => 'this.${c.fieldName}\$equalsTo(${c.fieldName});')
+        .map((c) => '${c.fieldName}\$equalsTo(${c.fieldName});')
         .join();
     _sb.writeln('\n  void primaryKeys($pksParams) {$pksInit}');
     _sb.writeln(
@@ -370,7 +402,7 @@ class _Codegen {
       case SqlType.tsvector:
         return 'Map<String, String>';
     }
-    throw new StateError('Unmapped column type: $type');
+    throw StateError('Unmapped column type: $type');
   }
 
   String _transformToDart(String type, String expr) {
@@ -436,7 +468,7 @@ class _Codegen {
     _sb.writeln('  final String name;');
     _sb.writeln('  final String fqn;');
     _sb.writeln('\n  ${table.type}Table(this.name, {this.schema}) :'
-        'this.fqn = schema == null ? \'"\$name"\' : \'"\$schema"."\$name"\';');
+        'fqn = schema == null ? \'"\$name"\' : \'"\$schema"."\$name"\';');
 
     _writeTableInit(table);
     _writeTableRead(table);
@@ -453,8 +485,7 @@ class _Codegen {
 
   void _writeTableInit(Table table) {
     _sb.write('\n  Future init(PostgreSQLExecutionContext conn) async {\n');
-    final allColumnsCreateDdl =
-        table.columns.map((c) => _ddlCreate(c)).join(', ');
+    final allColumnsCreateDdl = table.columns.map(_ddlCreate).join(', ');
     final pkColNames = table.columns
         .where((c) => c.isKey == true)
         .map((c) => '"${c.name}"')
@@ -503,7 +534,7 @@ class _Codegen {
         '\n  Future<${table.type}Row> read(PostgreSQLExecutionContext conn, $pks, {List<String> columns}) async {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln(
-        '    final filter = new ${table.type}Filter()..primaryKeys($pksParams);');
+        '    final filter = ${table.type}Filter()..primaryKeys($pksParams);');
     _sb.writeln(
         '    final list = await query(conn, columns: columns, limit: 2, filter: filter);');
     _sb.writeln('    if (list.isEmpty) return null;');
@@ -529,16 +560,16 @@ class _Codegen {
         '\'SELECT \${columns.map((c) => \'"\$c"\').join(\', \')} '
         'FROM \$qexpr\', substitutionValues: filter?.\$params);');
     _sb.writeln(
-        '    return list.map((row) => new ${table.type}Row.fromRowMap(row)).toList();');
+        '    return list.map((row) => ${table.type}Row.fromRowMap(row)).toList();');
     _sb.writeln('  }');
   }
 
   void _writeTablePaginate(Table table) {
     _sb.writeln(
-        '\n Future<Page<${table.type}Row>> paginate(${table.type}ConnectionFn fn, '
-        '{int pageSize: 100, List<String> columns, ${table.type}Filter filter, ${table.type}Key startAfter,}) async {');
+        '\n Future<Page<${table.type}Row>> paginate(PostgreSQLExecutionContext c, '
+        '{int pageSize = 100, List<String> columns, ${table.type}Filter filter, ${table.type}Key startAfter,}) async {');
     _sb.writeln(
-        '  final List<String> fixedColumns = columns == null ? null : new List<String>.from(columns);');
+        '  final List<String> fixedColumns = columns == null ? null : List<String>.from(columns);');
     _sb.writeln('  if (fixedColumns != null) {');
     for (Column c in table.columns.where((c) => c.isKey == true)) {
       _sb.writeln(
@@ -546,7 +577,7 @@ class _Codegen {
     }
     _sb.writeln('  }');
     _sb.writeln(
-        '    final page = new ${table.type}Page._(null, false, fn, this, pageSize, fixedColumns, filter?.clone(), startAfter);');
+        '    final page = ${table.type}Page._(null, false, c, this, pageSize, fixedColumns, filter?.clone(), startAfter);');
     _sb.writeln('    return await page.next();');
     _sb.writeln('  }');
   }
@@ -614,7 +645,7 @@ class _Codegen {
     _sb.writeln(
         '\n  Future<int> update(PostgreSQLExecutionContext conn, $pks, ${table.type}Update update) {');
     _sb.writeln(
-        '    return updateAll(conn, update, filter: new ${table.type}Filter()..primaryKeys($pksParams));');
+        '    return updateAll(conn, update, filter: ${table.type}Filter()..primaryKeys($pksParams));');
     _sb.writeln('  }');
   }
 
@@ -624,7 +655,7 @@ class _Codegen {
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
-        '    final params = new Map<String, dynamic>.from(filter?.\$params ?? {})..addAll(update.\$params);');
+        '    final params = Map<String, dynamic>.from(filter?.\$params ?? {})..addAll(update.\$params);');
     _sb.writeln(
         '    final limitQ = (limit == null || limit == 0) ? \'\' : \' LIMIT \$limit\';');
     _sb.writeln(
@@ -644,7 +675,7 @@ class _Codegen {
     _sb.writeln(
         '\n  Future<int> delete(PostgreSQLExecutionContext conn, $pks) {');
     _sb.writeln(
-        '    return deleteAll(conn, new ${table.type}Filter()..primaryKeys($pksParams));');
+        '    return deleteAll(conn, ${table.type}Filter()..primaryKeys($pksParams));');
     _sb.writeln('  }');
   }
 
@@ -662,40 +693,35 @@ class _Codegen {
 
   void _writePage(Table table) {
     _sb.writeln(
-        '\ntypedef Future<R> ${table.type}ConnectionFn<R>(Future<R> fn(PostgreSQLExecutionContext c));');
-    _sb.writeln(
         '\nclass ${table.type}Page extends Object with PageMixin<${table.type}Row> {');
     _sb.writeln('  @override final bool isLast;');
     _sb.writeln('  @override final List<${table.type}Row> items;');
-    _sb.writeln('  final ${table.type}ConnectionFn _fn;');
+    _sb.writeln('  final PostgreSQLExecutionContext _c;');
     _sb.writeln('   final ${table.type}Table _table;');
     _sb.writeln('  final int _limit;');
     _sb.writeln('  final List<String> _columns;');
     _sb.writeln('  final ${table.type}Filter _filter;');
     _sb.writeln('  final ${table.type}Key _startAfter;');
     _sb.writeln(
-        '\n  ${table.type}Page._(this.items, this.isLast, this._fn, this._table, this._limit, this._columns, this._filter, this._startAfter);');
+        '\n  ${table.type}Page._(this.items, this.isLast, this._c, this._table, this._limit, this._columns, this._filter, this._startAfter);');
 
     _sb.writeln('\n  @override  Future<Page<${table.type}Row>> next() async {');
     _sb.writeln('    if (isLast) return null;');
     _sb.writeln(
-        '    final filter = _filter?.clone() ?? new ${table.type}Filter();');
+        '    final filter = _filter?.clone() ?? ${table.type}Filter();');
     _sb.writeln(
         '    if (items != null) {filter.keyAfter(items.last.toKey());} else if (_startAfter != null) {filter.keyAfter(_startAfter);}');
-    _sb.writeln('    final rs = await _fn((c) async {');
     final pks = table.columns
         .where((c) => c.isKey == true)
         .map((c) => '${table.type}Column.${c.fieldName},')
         .join();
     _sb.writeln(
-        '      final rows = await _table.query(c, columns: _columns, filter: filter, limit: _limit + 1, orderBy: [$pks]);');
+        '      final rows = await _table.query(_c, columns: _columns, filter: filter, limit: _limit + 1, orderBy: [$pks]);');
     _sb.writeln('      final nextLast = rows.length <= _limit;');
     _sb.writeln(
         '      final nextRows = nextLast ? rows : rows.sublist(0, _limit);');
     _sb.writeln(
-        '      return new ${table.type}Page._(nextRows, nextLast, _fn, _table, _limit, _columns, _filter, null);');
-    _sb.writeln('    });');
-    _sb.writeln('    return rs as Page<${table.type}Row>;');
+        '      return ${table.type}Page._(nextRows, nextLast, _c, _table, _limit, _columns, _filter, null);');
     _sb.writeln('  }');
 
     _sb.writeln('\n  @override\n  Future close() async{}');
@@ -735,7 +761,7 @@ _KV _keyValue(String name, String value, String type) {
     key = '@\$$name::JSONB';
     convert = 'convert.json.encode($value)';
   }
-  return new _KV(key, convert);
+  return _KV(key, convert);
 }
 
 class _KV {

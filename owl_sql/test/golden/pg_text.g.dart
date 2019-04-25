@@ -4,32 +4,34 @@ import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 import 'package:postgres/postgres.dart';
 
+import 'pg_scan.g.dart' as a;
+
 /// Column names of Text tables.
 class TextColumn {
   static const String id = 'id';
   static const String snippet = 'snippet';
   static const String vector = 'vector';
 
-  static const List<String> $all = const <String>[
+  static const List<String> $all = <String>[
     TextColumn.id,
     TextColumn.snippet,
     TextColumn.vector,
   ];
 
-  static const List<String> $keys = const <String>[
+  static const List<String> $keys = <String>[
     TextColumn.id,
   ];
 
-  static const List<String> $nonKeys = const <String>[
+  static const List<String> $nonKeys = <String>[
     TextColumn.snippet,
     TextColumn.vector,
   ];
 
-  static const List<String> $jsonb = const <String>[];
+  static const List<String> $jsonb = <String>[];
 
-  static const List<String> $bytea = const <String>[];
+  static const List<String> $bytea = <String>[];
 
-  static const List<String> $tsvector = const <String>[
+  static const List<String> $tsvector = <String>[
     TextColumn.vector,
   ];
 }
@@ -55,18 +57,20 @@ class TextRow {
   final String id;
   final String snippet;
   final Map<String, String> vector;
+  a.ScanRow scanRow;
 
   TextRow({
     this.id,
     this.snippet,
     this.vector,
+    this.scanRow,
   });
 
   factory TextRow.fromRowList(List row, {List<String> columns}) {
     columns ??= TextColumn.$all;
     assert(row.length == columns.length);
     if (columns == TextColumn.$all) {
-      return new TextRow(
+      return TextRow(
         id: row[0] as String,
         snippet: row[1] as String,
         vector: _parseTsvector(row[2] as String),
@@ -75,7 +79,7 @@ class TextRow {
     final int $id = columns.indexOf(TextColumn.id);
     final int $snippet = columns.indexOf(TextColumn.snippet);
     final int $vector = columns.indexOf(TextColumn.vector);
-    return new TextRow(
+    return TextRow(
       id: $id == -1 ? null : row[$id] as String,
       snippet: $snippet == -1 ? null : row[$snippet] as String,
       vector: $vector == -1 ? null : _parseTsvector(row[$vector] as String),
@@ -89,20 +93,20 @@ class TextRow {
       if (row.length == 1) {
         table = row.keys.first;
       } else {
-        throw new StateError(
+        throw StateError(
             'Unable to lookup table prefix: $table of ${row.keys}');
       }
     }
     final map = row[table];
     if (map == null) return null;
-    return new TextRow(
+    return TextRow(
       id: map[TextColumn.id] as String,
       snippet: map[TextColumn.snippet] as String,
       vector: _parseTsvector(map[TextColumn.vector] as String),
     );
   }
 
-  Map<String, dynamic> toFieldMap({bool removeNulls: false}) {
+  Map<String, dynamic> toFieldMap({bool removeNulls = false}) {
     final $map = {
       'id': id,
       'snippet': snippet,
@@ -114,7 +118,7 @@ class TextRow {
     return $map;
   }
 
-  Map<String, dynamic> toColumnMap({bool removeNulls: false}) {
+  Map<String, dynamic> toColumnMap({bool removeNulls = false}) {
     final $map = {
       'id': id,
       'snippet': snippet,
@@ -126,7 +130,7 @@ class TextRow {
     return $map;
   }
 
-  TextKey toKey() => new TextKey(
+  TextKey toKey() => TextKey(
         id: id,
       );
 }
@@ -138,14 +142,14 @@ class TextFilter {
   int _cnt = 0;
 
   TextFilter clone() {
-    return new TextFilter()
+    return TextFilter()
       ..$params.addAll($params)
       ..$expressions.addAll($expressions)
       .._cnt = _cnt;
   }
 
   void primaryKeys(String id) {
-    this.id$equalsTo(id);
+    id$equalsTo(id);
   }
 
   String $join(String op) => $expressions.map((s) => '($s)').join(op);
@@ -307,7 +311,7 @@ class TextTable {
   final String fqn;
 
   TextTable(this.name, {this.schema})
-      : this.fqn = schema == null ? '"$name"' : '"$schema"."$name"';
+      : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
     await conn.execute(
@@ -323,7 +327,7 @@ class TextTable {
   Future<TextRow> read(PostgreSQLExecutionContext conn, String id,
       {List<String> columns}) async {
     columns ??= TextColumn.$all;
-    final filter = new TextFilter()..primaryKeys(id);
+    final filter = TextFilter()..primaryKeys(id);
     final list = await query(conn, columns: columns, limit: 2, filter: filter);
     if (list.isEmpty) return null;
     return list.single;
@@ -352,24 +356,24 @@ class TextTable {
     final list = await conn.mappedResultsQuery(
         'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr',
         substitutionValues: filter?.$params);
-    return list.map((row) => new TextRow.fromRowMap(row)).toList();
+    return list.map((row) => TextRow.fromRowMap(row)).toList();
   }
 
   Future<Page<TextRow>> paginate(
-    TextConnectionFn fn, {
-    int pageSize: 100,
+    PostgreSQLExecutionContext c, {
+    int pageSize = 100,
     List<String> columns,
     TextFilter filter,
     TextKey startAfter,
   }) async {
     final List<String> fixedColumns =
-        columns == null ? null : new List<String>.from(columns);
+        columns == null ? null : List<String>.from(columns);
     if (fixedColumns != null) {
       if (!fixedColumns.contains(TextColumn.id)) {
         fixedColumns.add(TextColumn.id);
       }
     }
-    final page = new TextPage._(null, false, fn, this, pageSize, fixedColumns,
+    final page = TextPage._(null, false, c, this, pageSize, fixedColumns,
         filter?.clone(), startAfter);
     return await page.next();
   }
@@ -414,7 +418,7 @@ class TextTable {
 
   Future<int> update(
       PostgreSQLExecutionContext conn, String id, TextUpdate update) {
-    return updateAll(conn, update, filter: new TextFilter()..primaryKeys(id));
+    return updateAll(conn, update, filter: TextFilter()..primaryKeys(id));
   }
 
   Future<int> updateAll(PostgreSQLExecutionContext conn, TextUpdate update,
@@ -422,7 +426,7 @@ class TextTable {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
-    final params = new Map<String, dynamic>.from(filter?.$params ?? {})
+    final params = Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
     return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
@@ -430,7 +434,7 @@ class TextTable {
   }
 
   Future<int> delete(PostgreSQLExecutionContext conn, String id) {
-    return deleteAll(conn, new TextFilter()..primaryKeys(id));
+    return deleteAll(conn, TextFilter()..primaryKeys(id));
   }
 
   Future<int> deleteAll(PostgreSQLExecutionContext conn, TextFilter filter,
@@ -444,47 +448,41 @@ class TextTable {
   }
 }
 
-typedef Future<R> TextConnectionFn<R>(
-    Future<R> fn(PostgreSQLExecutionContext c));
-
 class TextPage extends Object with PageMixin<TextRow> {
   @override
   final bool isLast;
   @override
   final List<TextRow> items;
-  final TextConnectionFn _fn;
+  final PostgreSQLExecutionContext _c;
   final TextTable _table;
   final int _limit;
   final List<String> _columns;
   final TextFilter _filter;
   final TextKey _startAfter;
 
-  TextPage._(this.items, this.isLast, this._fn, this._table, this._limit,
+  TextPage._(this.items, this.isLast, this._c, this._table, this._limit,
       this._columns, this._filter, this._startAfter);
 
   @override
   Future<Page<TextRow>> next() async {
     if (isLast) return null;
-    final filter = _filter?.clone() ?? new TextFilter();
+    final filter = _filter?.clone() ?? TextFilter();
     if (items != null) {
       filter.keyAfter(items.last.toKey());
     } else if (_startAfter != null) {
       filter.keyAfter(_startAfter);
     }
-    final rs = await _fn((c) async {
-      final rows = await _table.query(c,
-          columns: _columns,
-          filter: filter,
-          limit: _limit + 1,
-          orderBy: [
-            TextColumn.id,
-          ]);
-      final nextLast = rows.length <= _limit;
-      final nextRows = nextLast ? rows : rows.sublist(0, _limit);
-      return new TextPage._(
-          nextRows, nextLast, _fn, _table, _limit, _columns, _filter, null);
-    });
-    return rs as Page<TextRow>;
+    final rows = await _table.query(_c,
+        columns: _columns,
+        filter: filter,
+        limit: _limit + 1,
+        orderBy: [
+          TextColumn.id,
+        ]);
+    final nextLast = rows.length <= _limit;
+    final nextRows = nextLast ? rows : rows.sublist(0, _limit);
+    return TextPage._(
+        nextRows, nextLast, _c, _table, _limit, _columns, _filter, null);
   }
 
   @override
