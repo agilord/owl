@@ -1,0 +1,78 @@
+endpoints:
+  - method: GET
+    path: /pets
+    action: listPets
+    query:
+      - name: limit
+        type: int
+        description: How many items to return at one time (max 100)
+    responses:
+      - status: 200
+        description: A paged array of pets
+        headers:
+          - name: x-next
+            description: A link to the next page of responses
+        body: Pets
+
+  - method: POST
+    path: /pets
+    action: createPets
+    body: Pet
+    responses:
+      - status: 201
+      - status: 409
+        body: Error
+
+  - method: GET
+    path: /pets/<petId>
+    action: getPet
+    responses:
+      - status: 200
+        body: Pet
+      - status: 404
+        body: Error
+
+  - method: POST
+    path: /upload/<petId>
+    action: uploadImage
+    body: stream
+    headers:
+      - name: content-type
+    responses:
+      - status: 201
+        body:
+          fields:
+            imageId:
+      - status: 404
+        body: Error
+
+  - method: GET
+    path: /download/<petId>
+    action: downloadImage
+    responses:
+      - status: 200
+        body: stream
+      - status: 404
+        body: Error
+
+messages:
+  - name: Error
+    fields:
+      - name: code
+        type: int
+        required: true
+      - name: message
+        required: true
+  - name: Pet
+    fields:
+      - name: id
+        required: true
+      - name: name
+        required: true
+        description: The nickname of the pet.
+  - name: Pets
+    description: List of pets.
+    fields:
+      - name: pets
+        type: List<Pet>
+        required: true
