@@ -1,5 +1,10 @@
 # Changelog
 
+# 0.7.1
+
+- Updated code to latest Dart SDK and pedantic lints.
+- More support for CockroachDB (e.g. column families, ordered keys).
+
 # 0.7.0
 
 **Breaking changes**:

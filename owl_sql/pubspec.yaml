@@ -1,13 +1,12 @@
 name: owl_sql
 description: >
     Source code generator for SQL CRUD (Postgresql and CockroachDB-flavoured SQL).
-version: 0.7.0
-author: Istvan Soos <istvan.soos@agilord.com>
+version: 0.7.1
 
 homepage: https://github.com/agilord/owl
 
 environment:
-  sdk: '>=2.2.0 <3.0.0'
+  sdk: '>=2.7.0 <3.0.0'
 
 dev_dependencies:
   meta: ^1.0.0

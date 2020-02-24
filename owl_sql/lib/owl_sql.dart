@@ -16,10 +16,21 @@ class Column {
   final String type;
   final String defaultsTo;
   final bool isKey;
+  final String family;
+  final bool isDescending;
 
-  Column(this.name, this.type, {this.defaultsTo, this.isKey});
+  Column(
+    this.name,
+    this.type, {
+    this.defaultsTo,
+    bool isKey,
+    this.family,
+    bool isDescending,
+  })  : isKey = isKey ?? false,
+        isDescending = isDescending ?? false;
 
   String get fieldName => snakeToFieldName(name);
+  bool get hasFamily => family != null && family.isNotEmpty;
 }
 
 abstract class SqlType {

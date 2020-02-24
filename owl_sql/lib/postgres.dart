@@ -9,19 +9,19 @@ export 'owl_sql.dart';
 Future<bool> writeInto(
   List<Table> tables,
   String targetFile, {
+  String header,
   Map<String, String> imports,
   bool targetCockroachDB = false,
   bool format = true,
 }) async {
-  return await writeIntoFile(
-      tables,
-      File(targetFile),
-      (List<Table> items) => generateSource(
-            items,
-            imports: imports,
-            targetCockroachDB: targetCockroachDB,
-          ),
-      format);
+  return await writeIntoFile(tables, File(targetFile), (List<Table> items) {
+    final src = generateSource(
+      items,
+      imports: imports,
+      targetCockroachDB: targetCockroachDB,
+    );
+    return '${header ?? ''}$src';
+  }, format);
 }
 
 String generateSource(
@@ -51,6 +51,8 @@ class _Codegen {
             (table) => table.columns.any((c) => c.type == SqlType.tsvector));
 
   String generate() {
+    _sb.writeln(
+        '// ignore_for_file: omit_local_variable_types, prefer_single_quotes');
     final imports = ['import \'dart:async\';'];
     if (_hasJsonb || _hasBytea) {
       imports.add('import \'dart:convert\' as convert;');
@@ -136,35 +138,40 @@ class _Codegen {
     _sb.writeln('\n/// Unique continuity position for ${table.type} tables.');
     _sb.writeln(
         'class ${table.type}Key implements Comparable<${table.type}Key>{');
-    for (Column col in table.columns.where((c) => c.isKey == true)) {
+    for (Column col in table.columns.where((c) => c.isKey)) {
       _sb.write('final ${_toDartType(col.type)} ${col.fieldName};\n');
     }
     _sb.write('\n  ${table.type}Key({\n');
-    for (Column col in table.columns.where((c) => c.isKey == true)) {
+    for (Column col in table.columns.where((c) => c.isKey)) {
       _sb.write('  @required this.${col.fieldName},\n');
     }
     _sb.writeln('  });');
     _sb.writeln('\n  @override int compareTo(${table.type}Key \$other) {');
     _sb.writeln('  int \$x = 0;');
-    for (Column col in table.columns.where((c) => c.isKey == true)) {
+    for (Column col in table.columns.where((c) => c.isKey)) {
+      final sign = col.isDescending ? '-' : '';
       if (col.type == SqlType.bytea) {
         _sb.writeln(
             '  for (int i = 0; i < ${col.fieldName}.length && i < \$other.${col.fieldName}.length; i++) {');
         _sb.writeln(
             '    \$x = ${col.fieldName}[i].compareTo(\$other.${col.fieldName}[i]);');
-        _sb.writeln('    if (\$x != 0) return \$x;');
+        _sb.writeln('    if (\$x != 0) return $sign\$x;');
         _sb.writeln('  }');
         _sb.writeln(
             '  \$x = ${col.fieldName}.length.compareTo(\$other.${col.fieldName}.length);');
-        _sb.writeln('  if (\$x != 0) return \$x;');
+        _sb.writeln('  if (\$x != 0) return $sign\$x;');
       } else {
         _sb.writeln(
             '  \$x = ${col.fieldName}.compareTo(\$other.${col.fieldName});');
-        _sb.writeln('  if (\$x != 0) return \$x;');
+        _sb.writeln('  if (\$x != 0) return $sign\$x;');
       }
     }
     _sb.writeln('  return 0;');
     _sb.writeln('  }');
+    _sb.writeln(
+        '\n  bool isAfter(${table.type}Key other) => compareTo(other) > 0;');
+    _sb.writeln(
+        '\n  bool isBefore(${table.type}Key other) => compareTo(other) < 0;');
     _sb.write('}\n');
   }
 
@@ -299,7 +306,8 @@ class _Codegen {
       _sb.writeln('    final key$i = _next();');
       final kv = _keyValue('key$i', 'key.${pks[i].fieldName}', pks[i].type);
       _sb.writeln('    \$params[key$i] = ${kv.convert};');
-      final x = '"${pks[i].name}" > ${kv.key}';
+      final sign = pks[i].isDescending ? '<' : '>';
+      final x = '"${pks[i].name}" $sign ${kv.key}';
       if (i == pks.length - 1) {
         expr = x;
       } else {
@@ -458,6 +466,14 @@ class _Codegen {
       _sb.writeln('\n void ${col.fieldName}\$expr(String expr) {'
           '\$expressions.add(\'"${col.name}" = \$expr\');'
           '}\n');
+
+      if (col.type == SqlType.smallint || col.type == SqlType.bigint) {
+        _sb.writeln('\n void ${col.fieldName}\$increment([int amount = 1]) {'
+            'if (amount == 0) return;'
+            'final sign = amount > 0 ? \'+\':\'-\';'
+            '\$expressions.add(\'"${col.name}" = "${col.name}" \$sign \${amount.abs()}\');'
+            '}\n');
+      }
     }
     _sb.write('}\n');
   }
@@ -486,16 +502,42 @@ class _Codegen {
   void _writeTableInit(Table table) {
     _sb.write('\n  Future init(PostgreSQLExecutionContext conn) async {\n');
     final allColumnsCreateDdl = table.columns.map(_ddlCreate).join(', ');
-    final pkColNames = table.columns
-        .where((c) => c.isKey == true)
-        .map((c) => '"${c.name}"')
-        .join(', ');
+    final pkColNames = table.columns.where((c) => c.isKey).map((c) {
+      final order = c.isDescending ? ' DESC' : '';
+      return '"${c.name}"$order';
+    }).join(', ');
+    final hasFamily = table.columns.any((c) => c.hasFamily);
+    final pksWithFamily = table.columns.where((c) => c.isKey && c.hasFamily);
+    final firstPkFamily =
+        pksWithFamily.isEmpty ? null : pksWithFamily.first.family;
+    final firstFamily = firstPkFamily ?? 'primary';
+    final familyColumns = <String, List<Column>>{};
+    for (final col in table.columns) {
+      familyColumns
+          .putIfAbsent(col.family ?? firstFamily, () => <Column>[])
+          .add(col);
+    }
+    final families = StringBuffer();
+    if (_targetCockroachDB && hasFamily) {
+      families.write(
+          ', FAMILY "$firstFamily" (${familyColumns[firstFamily].map((c) => '"${c.name}"').join(', ')})');
+      for (final f in familyColumns.keys) {
+        if (f == firstFamily) continue;
+        families.write(
+            ', FAMILY "$f" (${familyColumns[f].map((c) => '"${c.name}"').join(', ')})');
+      }
+    }
+
     _sb.writeln(
-        '    await conn.execute("""CREATE TABLE IF NOT EXISTS \$fqn ($allColumnsCreateDdl, PRIMARY KEY ($pkColNames));""");');
+        '    await conn.execute("""CREATE TABLE IF NOT EXISTS \$fqn ($allColumnsCreateDdl, PRIMARY KEY ($pkColNames)$families);""");');
     for (Column col in table.columns) {
       if (col.isKey == true) continue;
+      final emitFamily =
+          _targetCockroachDB && ((col.family ?? firstFamily) != firstFamily);
+      final family =
+          emitFamily ? ' CREATE IF NOT EXISTS FAMILY "${col.family}"' : '';
       _sb.writeln(
-          '  await conn.execute("""ALTER TABLE \$fqn ADD COLUMN IF NOT EXISTS ${_ddlCreate(col)};""");');
+          '  await conn.execute("""ALTER TABLE \$fqn ADD COLUMN IF NOT EXISTS ${_ddlCreate(col)}$family;""");');
     }
     for (Index index in table.indexes ?? []) {
       final cols = index.columns.map((s) {
@@ -549,7 +591,7 @@ class _Codegen {
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? null : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
-        '    final orderByQ = (orderBy == null || orderBy.isEmpty) ? null : \'ORDER BY \${orderBy.join(\', \')}\';');
+        '    final orderByQ = (orderBy == null || orderBy.isEmpty) ? null : \'ORDER BY \${orderBy.map((s)=>\'"\$s"\').join(\', \')}\';');
     _sb.writeln(
         '    final offsetQ = (offset == null || offset == 0) ? null : \'OFFSET \$offset\';');
     _sb.writeln(
@@ -585,7 +627,7 @@ class _Codegen {
   void _writeTableInsert(Table table) {
     final ff = (_hasJsonb || _hasBytea || _hasTsvector) ? ' ' : ' final';
     _sb.writeln(
-        '\n  Future<int> insert(PostgreSQLExecutionContext conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String> columns, bool upsert,}) async {');
+        '\n  Future<int> insert(PostgreSQLExecutionContext conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String> columns, bool upsert, bool onConflictDoNothing,}) async {');
     _sb.writeln(
         '    final List<${table.type}Row> rows = items is ${table.type}Row ? [items] : items as List<${table.type}Row>;');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
@@ -628,8 +670,12 @@ class _Codegen {
     _sb.writeln('    }');
     _sb.writeln('    if (list.isEmpty) {return 0;}');
     _sb.writeln('    final verb = upsert == true ? \'UPSERT\' : \'INSERT\';');
+    _sb.writeln('    var onConflict = \'\';');
+    _sb.writeln('    if (onConflictDoNothing ?? false) {');
+    _sb.writeln('      onConflict = \' ON CONFLICT DO NOTHING\';');
+    _sb.writeln('    }');
     _sb.writeln(
-        '    return conn.execute(\'\$verb INTO \$fqn (\${columns.map((c) => \'"\$c"\').join(\', \')}) VALUES \${list.join(\', \')}\', substitutionValues: params);');
+        '    return conn.execute(\'\$verb INTO \$fqn (\${columns.map((c) => \'"\$c"\').join(\', \')}) VALUES \${list.join(\', \')}\$onConflict\', substitutionValues: params);');
     _sb.writeln('  }');
   }
 

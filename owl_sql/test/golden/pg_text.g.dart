@@ -1,3 +1,4 @@
+// ignore_for_file: omit_local_variable_types, prefer_single_quotes
 import 'dart:async';
 
 import 'package:meta/meta.dart';
@@ -51,6 +52,10 @@ class TextKey implements Comparable<TextKey> {
     if ($x != 0) return $x;
     return 0;
   }
+
+  bool isAfter(TextKey other) => compareTo(other) > 0;
+
+  bool isBefore(TextKey other) => compareTo(other) < 0;
 }
 
 class TextRow {
@@ -347,7 +352,7 @@ class TextTable {
         : 'WHERE ${filter.$join(' AND ')}';
     final orderByQ = (orderBy == null || orderBy.isEmpty)
         ? null
-        : 'ORDER BY ${orderBy.join(', ')}';
+        : 'ORDER BY ${orderBy.map((s) => '"$s"').join(', ')}';
     final offsetQ = (offset == null || offset == 0) ? null : 'OFFSET $offset';
     final limitQ = (limit == null || limit == 0) ? null : 'LIMIT $limit';
     final qexpr = ['$fqn', whereQ, orderByQ, offsetQ, limitQ]
@@ -384,6 +389,7 @@ class TextTable {
     items, {
     List<String> columns,
     bool upsert,
+    bool onConflictDoNothing,
   }) async {
     final List<TextRow> rows =
         items is TextRow ? [items] : items as List<TextRow>;
@@ -411,8 +417,12 @@ class TextTable {
       return 0;
     }
     final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var onConflict = '';
+    if (onConflictDoNothing ?? false) {
+      onConflict = ' ON CONFLICT DO NOTHING';
+    }
     return conn.execute(
-        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}',
+        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
         substitutionValues: params);
   }
 

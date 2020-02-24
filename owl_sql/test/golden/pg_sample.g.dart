@@ -1,3 +1,4 @@
+// ignore_for_file: omit_local_variable_types, prefer_single_quotes
 import 'dart:async';
 import 'dart:convert' as convert;
 
@@ -70,6 +71,10 @@ class SampleKey implements Comparable<SampleKey> {
     if ($x != 0) return $x;
     return 0;
   }
+
+  bool isAfter(SampleKey other) => compareTo(other) > 0;
+
+  bool isBefore(SampleKey other) => compareTo(other) < 0;
 }
 
 class SampleRow {
@@ -627,6 +632,12 @@ class SampleUpdate {
     $expressions.add('"bigint_col" = $expr');
   }
 
+  void bigintCol$increment([int amount = 1]) {
+    if (amount == 0) return;
+    final sign = amount > 0 ? '+' : '-';
+    $expressions.add('"bigint_col" = "bigint_col" $sign ${amount.abs()}');
+  }
+
   void smallintCol(int value) {
     if (value == null) return;
     final key = _next();
@@ -640,6 +651,12 @@ class SampleUpdate {
 
   void smallintCol$expr(String expr) {
     $expressions.add('"smallint_col" = $expr');
+  }
+
+  void smallintCol$increment([int amount = 1]) {
+    if (amount == 0) return;
+    final sign = amount > 0 ? '+' : '-';
+    $expressions.add('"smallint_col" = "smallint_col" $sign ${amount.abs()}');
   }
 
   void uuidCol(String value) {
@@ -740,7 +757,7 @@ class SampleTable {
         : 'WHERE ${filter.$join(' AND ')}';
     final orderByQ = (orderBy == null || orderBy.isEmpty)
         ? null
-        : 'ORDER BY ${orderBy.join(', ')}';
+        : 'ORDER BY ${orderBy.map((s) => '"$s"').join(', ')}';
     final offsetQ = (offset == null || offset == 0) ? null : 'OFFSET $offset';
     final limitQ = (limit == null || limit == 0) ? null : 'LIMIT $limit';
     final qexpr = ['$fqn', whereQ, orderByQ, offsetQ, limitQ]
@@ -777,6 +794,7 @@ class SampleTable {
     items, {
     List<String> columns,
     bool upsert,
+    bool onConflictDoNothing,
   }) async {
     final List<SampleRow> rows =
         items is SampleRow ? [items] : items as List<SampleRow>;
@@ -807,8 +825,12 @@ class SampleTable {
       return 0;
     }
     final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var onConflict = '';
+    if (onConflictDoNothing ?? false) {
+      onConflict = ' ON CONFLICT DO NOTHING';
+    }
     return conn.execute(
-        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}',
+        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
         substitutionValues: params);
   }
 

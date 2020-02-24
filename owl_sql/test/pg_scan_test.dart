@@ -25,11 +25,11 @@ Future main() async {
 
     test('populate data', () async {
       final rows = <ScanRow>[];
-      for (int i = 0; i < 20; i++) {
+      for (var i = 0; i < 20; i++) {
         final id1 = i.toString().padLeft(2, '0');
-        for (int j = 0; j < 20; j++) {
+        for (var j = 0; j < 20; j++) {
           final id2 = <int>[j ~/ 10, j % 10];
-          for (int k = 0; k < 20; k++) {
+          for (var k = 0; k < 20; k++) {
             rows.add(ScanRow(
               id1: id1,
               id2: id2,
@@ -41,7 +41,7 @@ Future main() async {
       }
 
       rows.shuffle();
-      for (int i = 0; i < rows.length; i += 100) {
+      for (var i = 0; i < rows.length; i += 100) {
         await table.insert(conn, rows.sublist(i, i + 100).toList());
       }
 

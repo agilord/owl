@@ -5,19 +5,19 @@ import 'dart:io';
 Future<bool> writeIntoFile<T>(
     /*T | List<T>*/ items,
     File file,
-    String generate(List<T> items),
+    String Function(List<T> items) generate,
     bool format) async {
-  final List<T> tables = items is List ? items as List<T> : [items].cast();
+  final tables = items is List ? items as List<T> : [items].cast<T>();
   String oldContent;
   if (await file.exists()) {
     oldContent = await file.readAsString();
   } else {
     await file.parent.create(recursive: true);
   }
-  final String content = generate(tables);
+  final content = generate(tables);
   await file.writeAsString(content);
   if (format) {
-    String executable = Platform.isWindows ? 'dartfmt.bat' : 'dartfmt';
+    var executable = Platform.isWindows ? 'dartfmt.bat' : 'dartfmt';
     final p = Platform.executable.split(Platform.pathSeparator);
     if (p.last == 'dart' || p.last == 'dart.exe') {
       p.removeLast();
@@ -29,6 +29,6 @@ Future<bool> writeIntoFile<T>(
       print('dartfmt exited with code $exitCode');
     }
   }
-  final String newContent = await file.readAsString();
+  final newContent = await file.readAsString();
   return oldContent != newContent;
 }

@@ -1,3 +1,4 @@
+// ignore_for_file: omit_local_variable_types, prefer_single_quotes
 import 'dart:async';
 import 'dart:convert' as convert;
 
@@ -66,6 +67,10 @@ class ScanKey implements Comparable<ScanKey> {
     if ($x != 0) return $x;
     return 0;
   }
+
+  bool isAfter(ScanKey other) => compareTo(other) > 0;
+
+  bool isBefore(ScanKey other) => compareTo(other) < 0;
 }
 
 class ScanRow {
@@ -459,7 +464,7 @@ class ScanTable {
         : 'WHERE ${filter.$join(' AND ')}';
     final orderByQ = (orderBy == null || orderBy.isEmpty)
         ? null
-        : 'ORDER BY ${orderBy.join(', ')}';
+        : 'ORDER BY ${orderBy.map((s) => '"$s"').join(', ')}';
     final offsetQ = (offset == null || offset == 0) ? null : 'OFFSET $offset';
     final limitQ = (limit == null || limit == 0) ? null : 'LIMIT $limit';
     final qexpr = ['$fqn', whereQ, orderByQ, offsetQ, limitQ]
@@ -502,6 +507,7 @@ class ScanTable {
     items, {
     List<String> columns,
     bool upsert,
+    bool onConflictDoNothing,
   }) async {
     final List<ScanRow> rows =
         items is ScanRow ? [items] : items as List<ScanRow>;
@@ -528,8 +534,12 @@ class ScanTable {
       return 0;
     }
     final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var onConflict = '';
+    if (onConflictDoNothing ?? false) {
+      onConflict = ' ON CONFLICT DO NOTHING';
+    }
     return conn.execute(
-        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}',
+        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
         substitutionValues: params);
   }
 
