@@ -423,8 +423,12 @@ class _Codegen {
   }
 
   String _ddlCreate(Column c) {
-    return '"${c.name}" ${_toPgType(c.type)}' +
-        (c.defaultsTo == null ? '' : ' DEFAULT ${c.defaultsTo}');
+    return [
+      '"${c.name}"',
+      _toPgType(c.type),
+      if (c.isUnique) 'UNIQUE',
+      if (c.defaultsTo != null) 'DEFAULT ${c.defaultsTo}',
+    ].join(' ');
   }
 
   String _guard(String name) {

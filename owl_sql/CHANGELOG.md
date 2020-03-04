@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.7.2
+
+- Supports column-level `UNIQUE` constraints.
+
 # 0.7.1
 
 - Updated code to latest Dart SDK and pedantic lints.

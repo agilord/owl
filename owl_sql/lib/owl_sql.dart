@@ -16,6 +16,7 @@ class Column {
   final String type;
   final String defaultsTo;
   final bool isKey;
+  final bool isUnique;
   final String family;
   final bool isDescending;
 
@@ -24,9 +25,11 @@ class Column {
     this.type, {
     this.defaultsTo,
     bool isKey,
+    bool isUnique,
     this.family,
     bool isDescending,
   })  : isKey = isKey ?? false,
+        isUnique = isUnique ?? false,
         isDescending = isDescending ?? false;
 
   String get fieldName => snakeToFieldName(name);
