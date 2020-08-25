@@ -239,7 +239,7 @@ class _Codegen {
     for (Column col in table.columns) {
       String expr = col.fieldName;
       if (col.type == SqlType.timestamp) {
-        expr = '$expr?.toIso8601String()';
+        expr = '$expr?.toUtc()?.toIso8601String()?.replaceFirst(\'Z\', \'\')';
       }
       _sb.write('  \'${col.fieldName}\': $expr,\n');
     }
@@ -255,7 +255,7 @@ class _Codegen {
     for (Column col in table.columns) {
       String expr = col.fieldName;
       if (col.type == SqlType.timestamp) {
-        expr = '$expr?.toIso8601String()';
+        expr = '$expr?.toUtc()?.toIso8601String()?.replaceFirst(\'Z\', \'\')';
       }
       _sb.write('  \'${col.name}\': $expr,\n');
     }
@@ -456,7 +456,9 @@ class _Codegen {
       if (col.type == SqlType.tsvector) {
         value = '_tsvectorToString(value)';
       }
-      _sb.writeln('\n void ${col.fieldName}(${_toDartType(col.type)} value) {'
+      _sb.writeln(
+          '\n void ${col.fieldName}(${_toDartType(col.type)} value, {bool setIfNull = false}) {'
+          'if (value == null && setIfNull) {${col.fieldName}\$null(); return;}'
           'if (value == null) return;'
           'final key = _next();'
           '\$params[key] = $value;'
@@ -504,10 +506,17 @@ class _Codegen {
   }
 
   void _writeTableInit(Table table) {
-    _sb.write('\n  Future init(PostgreSQLExecutionContext conn) async {\n');
+    final optionals = [
+      if (_targetCockroachDB) 'bool isCockroachDB = false',
+    ];
+    final optionalsParams =
+        optionals.isEmpty ? '' : ', {${optionals.join(', ')}}';
+    _sb.write(
+        '\n  Future init(PostgreSQLExecutionContext conn$optionalsParams) async {\n');
     final allColumnsCreateDdl = table.columns.map(_ddlCreate).join(', ');
     final pkColNames = table.columns.where((c) => c.isKey).map((c) {
-      final order = c.isDescending ? ' DESC' : '';
+      final order =
+          c.isDescending ? '\${isCockroachDB ? \' DESC\' : \'\'}' : '';
       return '"${c.name}"$order';
     }).join(', ');
     final hasFamily = table.columns.any((c) => c.hasFamily);
@@ -532,16 +541,25 @@ class _Codegen {
       }
     }
 
-    _sb.writeln(
-        '    await conn.execute("""CREATE TABLE IF NOT EXISTS \$fqn ($allColumnsCreateDdl, PRIMARY KEY ($pkColNames)$families);""");');
+    final familiesBlock = _targetCockroachDB && families.isNotEmpty
+        ? '      if (isCockroachDB) """$families""",\n'
+        : '';
+    _sb.writeln('    await conn.execute([\n'
+        '      """CREATE TABLE IF NOT EXISTS \$fqn ($allColumnsCreateDdl, PRIMARY KEY ($pkColNames)""",\n'
+        '$familiesBlock'
+        '      \');\',\n'
+        '      ].join());');
     for (Column col in table.columns) {
       if (col.isKey == true) continue;
       final emitFamily =
           _targetCockroachDB && ((col.family ?? firstFamily) != firstFamily);
-      final family =
-          emitFamily ? ' CREATE IF NOT EXISTS FAMILY "${col.family}"' : '';
-      _sb.writeln(
-          '  await conn.execute("""ALTER TABLE \$fqn ADD COLUMN IF NOT EXISTS ${_ddlCreate(col)}$family;""");');
+      final family = emitFamily
+          ? 'if (isCockroachDB) \' CREATE IF NOT EXISTS FAMILY "${col.family}"\',\n'
+          : '';
+      _sb.writeln('  await conn.execute(['
+          '"""ALTER TABLE \$fqn ADD COLUMN IF NOT EXISTS ${_ddlCreate(col)}""",\n'
+          '$family'
+          '\';\',].join());');
     }
     for (Index index in table.indexes ?? []) {
       final cols = index.columns.map((s) {
@@ -551,11 +569,9 @@ class _Codegen {
         return '"$s"';
       }).join(', ');
       String storing = '';
-      if (index.storing != null &&
-          index.storing.isNotEmpty &&
-          _targetCockroachDB) {
-        final storedCols = index.storing.map((s) => '"$s"').join(', ');
-        storing = ' STORING ($storedCols)';
+      if (index.including != null && index.including.isNotEmpty) {
+        final storedCols = index.including.map((s) => '"$s"').join(', ');
+        storing = ' INCLUDE ($storedCols)';
       }
       final inverted =
           (_targetCockroachDB && index.isInverted == true) ? ' INVERTED' : '';

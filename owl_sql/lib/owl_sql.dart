@@ -64,8 +64,13 @@ class Index {
   final List<String> columns;
   final bool isInverted;
 
-  /// CockroachDB-only field which stores the listed column values alongside the index.
-  final List<String> storing;
+  /// Stores the listed column values alongside the index.
+  final List<String> including;
 
-  Index(this.nameSuffix, this.columns, {this.isInverted = false, this.storing});
+  Index(
+    this.nameSuffix,
+    this.columns, {
+    this.isInverted = false,
+    this.including,
+  });
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+# 0.8.0
+
+**Breaking changes**:
+
+- `Index.storing` renamed to `Index.including`.
+- Generates the same SQL for Postgres and CockroachDB, however `init()`
+  needs `isCockroachDB: true` in the later cases.
+
 # 0.7.2
 
 - Supports column-level `UNIQUE` constraints.
