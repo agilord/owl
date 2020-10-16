@@ -264,7 +264,11 @@ class TextUpdate {
 
   String _next() => '$_prefix${_cnt++}';
 
-  void id(String value) {
+  void id(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      id$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -279,7 +283,11 @@ class TextUpdate {
     $expressions.add('"id" = $expr');
   }
 
-  void snippet(String value) {
+  void snippet(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      snippet$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -294,7 +302,11 @@ class TextUpdate {
     $expressions.add('"snippet" = $expr');
   }
 
-  void vector(Map<String, String> value) {
+  void vector(Map<String, String> value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      vector$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = _tsvectorToString(value);
@@ -319,12 +331,18 @@ class TextTable {
       : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
-    await conn.execute(
-        """CREATE TABLE IF NOT EXISTS $fqn ("id" TEXT, "snippet" TEXT, "vector" TSVECTOR, PRIMARY KEY ("id"));""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "snippet" TEXT;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "vector" TSVECTOR;""");
+    await conn.execute([
+      """CREATE TABLE IF NOT EXISTS $fqn ("id" TEXT, "snippet" TEXT, "vector" TSVECTOR, PRIMARY KEY ("id")""",
+      ');',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "snippet" TEXT""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "vector" TSVECTOR""",
+      ';',
+    ].join());
     await conn.execute(
         """CREATE INDEX IF NOT EXISTS "${name}__nx_vector_text" ON $fqn USING GIN("vector");""");
   }
@@ -416,10 +434,16 @@ class TextTable {
     if (list.isEmpty) {
       return 0;
     }
-    final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var verb = 'INSERT';
     var onConflict = '';
     if (onConflictDoNothing ?? false) {
       onConflict = ' ON CONFLICT DO NOTHING';
+    } else if (upsert ?? false) {
+      final colExprs = columns
+          .where(TextColumn.$nonKeys.contains)
+          .map((c) => '"$c" = EXCLUDED."$c"')
+          .join(', ');
+      onConflict = ' ON CONFLICT ("id") DO UPDATE SET $colExprs';
     }
     return conn.execute(
         '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',

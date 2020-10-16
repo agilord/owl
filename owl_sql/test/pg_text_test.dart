@@ -39,7 +39,7 @@ Future main() async {
       final row = await table.read(conn, 'tr1');
       expect(row.snippet, 'snippet-1');
       expect(row.vector, isNotEmpty);
-      expect(row.scanRow, isEmpty);
+      expect(row.scanRow, isNull);
     });
 
     test('search data', () async {

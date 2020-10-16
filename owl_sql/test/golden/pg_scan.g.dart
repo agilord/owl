@@ -364,7 +364,11 @@ class ScanUpdate {
 
   String _next() => '$_prefix${_cnt++}';
 
-  void id1(String value) {
+  void id1(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      id1$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -379,7 +383,11 @@ class ScanUpdate {
     $expressions.add('"id1" = $expr');
   }
 
-  void id2(List<int> value) {
+  void id2(List<int> value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      id2$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = convert.base64.encode(value);
@@ -394,7 +402,11 @@ class ScanUpdate {
     $expressions.add('"id2" = $expr');
   }
 
-  void id3(String value) {
+  void id3(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      id3$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -409,7 +421,11 @@ class ScanUpdate {
     $expressions.add('"id3" = $expr');
   }
 
-  void payload(List<int> value) {
+  void payload(List<int> value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      payload$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = convert.base64.encode(value);
@@ -434,10 +450,14 @@ class ScanTable {
       : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
-    await conn.execute(
-        """CREATE TABLE IF NOT EXISTS $fqn ("id1" TEXT, "id2" BYTEA, "id3" TEXT, "payload" BYTEA, PRIMARY KEY ("id1", "id2", "id3"));""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "payload" BYTEA;""");
+    await conn.execute([
+      """CREATE TABLE IF NOT EXISTS $fqn ("id1" TEXT, "id2" BYTEA, "id3" TEXT, "payload" BYTEA, PRIMARY KEY ("id1", "id2", "id3")""",
+      ');',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "payload" BYTEA""",
+      ';',
+    ].join());
   }
 
   Future<ScanRow> read(
@@ -533,10 +553,16 @@ class ScanTable {
     if (list.isEmpty) {
       return 0;
     }
-    final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var verb = 'INSERT';
     var onConflict = '';
     if (onConflictDoNothing ?? false) {
       onConflict = ' ON CONFLICT DO NOTHING';
+    } else if (upsert ?? false) {
+      final colExprs = columns
+          .where(ScanColumn.$nonKeys.contains)
+          .map((c) => '"$c" = EXCLUDED."$c"')
+          .join(', ');
+      onConflict = ' ON CONFLICT ("id1", "id2", "id3") DO UPDATE SET $colExprs';
     }
     return conn.execute(
         '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',

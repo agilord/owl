@@ -489,8 +489,19 @@ class _Codegen {
     _sb.writeln('  final String schema;');
     _sb.writeln('  final String name;');
     _sb.writeln('  final String fqn;');
-    _sb.writeln('\n  ${table.type}Table(this.name, {this.schema}) :'
-        'fqn = schema == null ? \'"\$name"\' : \'"\$schema"."\$name"\';');
+    final params = <String>[
+      'this.schema',
+      if (_targetCockroachDB) 'bool isCockroachDB',
+    ];
+    final initializers = [
+      'fqn = schema == null ? \'"\$name"\' : \'"\$schema"."\$name"\'',
+      if (_targetCockroachDB) '_isCockroachDB = isCockroachDB ?? false',
+    ];
+    if (_targetCockroachDB) {
+      _sb.writeln('  final bool _isCockroachDB;');
+    }
+    _sb.writeln('\n  ${table.type}Table(this.name, {${params.join(', ')}}) :'
+        '${initializers.join(', ')};');
 
     _writeTableInit(table);
     _writeTableRead(table);
@@ -506,17 +517,11 @@ class _Codegen {
   }
 
   void _writeTableInit(Table table) {
-    final optionals = [
-      if (_targetCockroachDB) 'bool isCockroachDB = false',
-    ];
-    final optionalsParams =
-        optionals.isEmpty ? '' : ', {${optionals.join(', ')}}';
-    _sb.write(
-        '\n  Future init(PostgreSQLExecutionContext conn$optionalsParams) async {\n');
+    _sb.write('\n  Future init(PostgreSQLExecutionContext conn) async {\n');
     final allColumnsCreateDdl = table.columns.map(_ddlCreate).join(', ');
     final pkColNames = table.columns.where((c) => c.isKey).map((c) {
       final order =
-          c.isDescending ? '\${isCockroachDB ? \' DESC\' : \'\'}' : '';
+          c.isDescending ? '\${_isCockroachDB ? \' DESC\' : \'\'}' : '';
       return '"${c.name}"$order';
     }).join(', ');
     final hasFamily = table.columns.any((c) => c.hasFamily);
@@ -542,7 +547,7 @@ class _Codegen {
     }
 
     final familiesBlock = _targetCockroachDB && families.isNotEmpty
-        ? '      if (isCockroachDB) """$families""",\n'
+        ? '      if (_isCockroachDB) """$families""",\n'
         : '';
     _sb.writeln('    await conn.execute([\n'
         '      """CREATE TABLE IF NOT EXISTS \$fqn ($allColumnsCreateDdl, PRIMARY KEY ($pkColNames)""",\n'
@@ -554,7 +559,7 @@ class _Codegen {
       final emitFamily =
           _targetCockroachDB && ((col.family ?? firstFamily) != firstFamily);
       final family = emitFamily
-          ? 'if (isCockroachDB) \' CREATE IF NOT EXISTS FAMILY "${col.family}"\',\n'
+          ? 'if (_isCockroachDB) \' CREATE IF NOT EXISTS FAMILY "${col.family}"\',\n'
           : '';
       _sb.writeln('  await conn.execute(['
           '"""ALTER TABLE \$fqn ADD COLUMN IF NOT EXISTS ${_ddlCreate(col)}""",\n'
@@ -573,12 +578,22 @@ class _Codegen {
         final storedCols = index.including.map((s) => '"$s"').join(', ');
         storing = ' INCLUDE ($storedCols)';
       }
-      final inverted =
-          (_targetCockroachDB && index.isInverted == true) ? ' INVERTED' : '';
-      final using =
-          (!_targetCockroachDB && index.isInverted == true) ? 'USING GIN' : '';
-      _sb.writeln(
-          '  await conn.execute("""CREATE$inverted INDEX IF NOT EXISTS "\${name}__nx_${index.nameSuffix}" ON \$fqn $using($cols)$storing;""");');
+      if (!index.isInverted) {
+        _sb.writeln(
+            '  await conn.execute("""CREATE INDEX IF NOT EXISTS "\${name}__nx_${index.nameSuffix}" ON \$fqn ($cols)$storing;""");');
+      } else {
+        if (_targetCockroachDB) {
+          _sb.writeln('  if (_isCockroachDB) {');
+          _sb.writeln(
+              '  await conn.execute("""CREATE INVERTED INDEX IF NOT EXISTS "\${name}__nx_${index.nameSuffix}" ON \$fqn ($cols)$storing;""");');
+          _sb.writeln('  } else {');
+        }
+        _sb.writeln(
+            '  await conn.execute("""CREATE INDEX IF NOT EXISTS "\${name}__nx_${index.nameSuffix}" ON \$fqn USING GIN($cols)$storing;""");');
+        if (_targetCockroachDB) {
+          _sb.writeln('  }');
+        }
+      }
     }
     _sb.write('\n  }\n');
   }
@@ -689,10 +704,25 @@ class _Codegen {
     _sb.writeln('      list.add(\'(\${exprs.join(\', \')})\');');
     _sb.writeln('    }');
     _sb.writeln('    if (list.isEmpty) {return 0;}');
-    _sb.writeln('    final verb = upsert == true ? \'UPSERT\' : \'INSERT\';');
+    _sb.writeln('    var verb = \'INSERT\';');
     _sb.writeln('    var onConflict = \'\';');
     _sb.writeln('    if (onConflictDoNothing ?? false) {');
     _sb.writeln('      onConflict = \' ON CONFLICT DO NOTHING\';');
+    if (_targetCockroachDB) {
+      _sb.writeln('    } else if ((upsert ?? false) && _isCockroachDB) {');
+      _sb.writeln('      verb = \'UPSERT\';');
+    }
+    _sb.writeln('    } else if (upsert ?? false) {');
+    final keyExpr = table.columns
+        .where((c) => c.isKey)
+        .map((e) => '"${e.name}"')
+        .join(', ');
+    _sb.writeln('      final colExprs = columns'
+        '.where(${table.type}Column.\$nonKeys.contains)'
+        '.map((c) => \'"\$c" = EXCLUDED."\$c"\')'
+        '.join(\', \');');
+    _sb.writeln(
+        '      onConflict = \' ON CONFLICT ($keyExpr) DO UPDATE SET \$colExprs\';');
     _sb.writeln('    }');
     _sb.writeln(
         '    return conn.execute(\'\$verb INTO \$fqn (\${columns.map((c) => \'"\$c"\').join(\', \')}) VALUES \${list.join(\', \')}\$onConflict\', substitutionValues: params);');

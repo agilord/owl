@@ -1,5 +1,11 @@
 # Changelog
 
+# 0.9.0
+
+**Breaking changes**:
+- `isCockroachDB: true` is moved from `*Table.init()` to the table-level.
+- Support the long-format `upsert` (for Postgres).
+
 # 0.8.0
 
 **Breaking changes**:

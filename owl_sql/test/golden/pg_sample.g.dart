@@ -173,7 +173,8 @@ class SampleRow {
       'bigintCol': bigintCol,
       'smallintCol': smallintCol,
       'uuidCol': uuidCol,
-      'timestampCol': timestampCol?.toIso8601String(),
+      'timestampCol':
+          timestampCol?.toUtc()?.toIso8601String()?.replaceFirst('Z', ''),
       'jsonbCol': jsonbCol,
     };
     if (removeNulls) {
@@ -191,7 +192,8 @@ class SampleRow {
       'bigint_col': bigintCol,
       'smallint_col': smallintCol,
       'uuid_col': uuidCol,
-      'timestamp_col': timestampCol?.toIso8601String(),
+      'timestamp_col':
+          timestampCol?.toUtc()?.toIso8601String()?.replaceFirst('Z', ''),
       'jsonb_col': jsonbCol,
     };
     if (removeNulls) {
@@ -557,7 +559,11 @@ class SampleUpdate {
 
   String _next() => '$_prefix${_cnt++}';
 
-  void textCol(String value) {
+  void textCol(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      textCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -572,7 +578,11 @@ class SampleUpdate {
     $expressions.add('"text_col" = $expr');
   }
 
-  void byteaCol(List<int> value) {
+  void byteaCol(List<int> value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      byteaCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = convert.base64.encode(value);
@@ -587,7 +597,11 @@ class SampleUpdate {
     $expressions.add('"bytea_col" = $expr');
   }
 
-  void booleanCol(bool value) {
+  void booleanCol(bool value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      booleanCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -602,7 +616,11 @@ class SampleUpdate {
     $expressions.add('"boolean_col" = $expr');
   }
 
-  void doubleCol(double value) {
+  void doubleCol(double value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      doubleCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -617,7 +635,11 @@ class SampleUpdate {
     $expressions.add('"double_col" = $expr');
   }
 
-  void bigintCol(int value) {
+  void bigintCol(int value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      bigintCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -638,7 +660,11 @@ class SampleUpdate {
     $expressions.add('"bigint_col" = "bigint_col" $sign ${amount.abs()}');
   }
 
-  void smallintCol(int value) {
+  void smallintCol(int value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      smallintCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -659,7 +685,11 @@ class SampleUpdate {
     $expressions.add('"smallint_col" = "smallint_col" $sign ${amount.abs()}');
   }
 
-  void uuidCol(String value) {
+  void uuidCol(String value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      uuidCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value;
@@ -674,7 +704,11 @@ class SampleUpdate {
     $expressions.add('"uuid_col" = $expr');
   }
 
-  void timestampCol(DateTime value) {
+  void timestampCol(DateTime value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      timestampCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = value.toUtc().toIso8601String().replaceFirst('Z', '');
@@ -689,7 +723,11 @@ class SampleUpdate {
     $expressions.add('"timestamp_col" = $expr');
   }
 
-  void jsonbCol(Map<String, dynamic> value) {
+  void jsonbCol(Map<String, dynamic> value, {bool setIfNull = false}) {
+    if (value == null && setIfNull) {
+      jsonbCol$null();
+      return;
+    }
     if (value == null) return;
     final key = _next();
     $params[key] = convert.json.encode(value);
@@ -714,24 +752,42 @@ class SampleTable {
       : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
   Future init(PostgreSQLExecutionContext conn) async {
-    await conn.execute(
-        """CREATE TABLE IF NOT EXISTS $fqn ("text_col" TEXT, "bytea_col" BYTEA, "boolean_col" BOOLEAN, "double_col" DOUBLE PRECISION, "bigint_col" BIGINT, "smallint_col" SMALLINT, "uuid_col" UUID, "timestamp_col" TIMESTAMP, "jsonb_col" JSONB, PRIMARY KEY ("text_col"));""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bytea_col" BYTEA;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "boolean_col" BOOLEAN;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "double_col" DOUBLE PRECISION;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bigint_col" BIGINT;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "smallint_col" SMALLINT;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "uuid_col" UUID;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "timestamp_col" TIMESTAMP;""");
-    await conn.execute(
-        """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "jsonb_col" JSONB;""");
+    await conn.execute([
+      """CREATE TABLE IF NOT EXISTS $fqn ("text_col" TEXT, "bytea_col" BYTEA, "boolean_col" BOOLEAN, "double_col" DOUBLE PRECISION, "bigint_col" BIGINT, "smallint_col" SMALLINT, "uuid_col" UUID, "timestamp_col" TIMESTAMP, "jsonb_col" JSONB, PRIMARY KEY ("text_col")""",
+      ');',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bytea_col" BYTEA""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "boolean_col" BOOLEAN""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "double_col" DOUBLE PRECISION""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "bigint_col" BIGINT""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "smallint_col" SMALLINT""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "uuid_col" UUID""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "timestamp_col" TIMESTAMP""",
+      ';',
+    ].join());
+    await conn.execute([
+      """ALTER TABLE $fqn ADD COLUMN IF NOT EXISTS "jsonb_col" JSONB""",
+      ';',
+    ].join());
   }
 
   Future<SampleRow> read(PostgreSQLExecutionContext conn, String textCol,
@@ -824,10 +880,16 @@ class SampleTable {
     if (list.isEmpty) {
       return 0;
     }
-    final verb = upsert == true ? 'UPSERT' : 'INSERT';
+    var verb = 'INSERT';
     var onConflict = '';
     if (onConflictDoNothing ?? false) {
       onConflict = ' ON CONFLICT DO NOTHING';
+    } else if (upsert ?? false) {
+      final colExprs = columns
+          .where(SampleColumn.$nonKeys.contains)
+          .map((c) => '"$c" = EXCLUDED."$c"')
+          .join(', ');
+      onConflict = ' ON CONFLICT ("text_col") DO UPDATE SET $colExprs';
     }
     return conn.execute(
         '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
