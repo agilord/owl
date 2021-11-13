@@ -7,7 +7,7 @@ import 'golden/pg_text.g.dart';
 
 Future main() async {
   group('pg_text', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
     final table = TextTable('ttbl', schema: 'test_text');
 
     setUpAll(() async {
@@ -29,14 +29,14 @@ Future main() async {
           TextRow(
             id: 'tr1',
             snippet: 'snippet-1',
-            vector: <String, String>{'abc': null, 'bcd': '1,2', 'cde': '3C,8'},
+            vector: <String, String>{'abc': '', 'bcd': '1,2', 'cde': '3C,8'},
           ));
       final list = await conn.query('SELECT COUNT(*) FROM ${table.fqn};');
       expect(list[0][0], 1);
     });
 
     test('read back data', () async {
-      final row = await table.read(conn, 'tr1');
+      final row = (await table.read(conn, 'tr1'))!;
       expect(row.snippet, 'snippet-1');
       expect(row.vector, isNotEmpty);
       expect(row.scanRow, isNull);
@@ -50,7 +50,7 @@ Future main() async {
     });
 
     test('update data', () async {
-      await table.update(conn, 'tr1', TextUpdate()..vector({'xx': null}));
+      await table.update(conn, 'tr1', TextUpdate()..vector({'xx': ''}));
     });
 
     test('search updated data', () async {

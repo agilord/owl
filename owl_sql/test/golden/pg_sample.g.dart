@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert' as convert;
 
-import 'package:meta/meta.dart';
 import 'package:page/page.dart';
 import 'package:postgres/postgres.dart';
 
@@ -61,7 +60,7 @@ class SampleKey implements Comparable<SampleKey> {
   final String textCol;
 
   SampleKey({
-    @required this.textCol,
+    required this.textCol,
   });
 
   @override
@@ -78,15 +77,15 @@ class SampleKey implements Comparable<SampleKey> {
 }
 
 class SampleRow {
-  final String textCol;
-  final List<int> byteaCol;
-  final bool booleanCol;
-  final double doubleCol;
-  final int bigintCol;
-  final int smallintCol;
-  final String uuidCol;
-  final DateTime timestampCol;
-  final Map<String, dynamic> jsonbCol;
+  final String? textCol;
+  final List<int>? byteaCol;
+  final bool? booleanCol;
+  final double? doubleCol;
+  final int? bigintCol;
+  final int? smallintCol;
+  final String? uuidCol;
+  final DateTime? timestampCol;
+  final Map<String, dynamic>? jsonbCol;
 
   SampleRow({
     this.textCol,
@@ -100,20 +99,20 @@ class SampleRow {
     this.jsonbCol,
   });
 
-  factory SampleRow.fromRowList(List row, {List<String> columns}) {
+  factory SampleRow.fromRowList(List row, {List<String>? columns}) {
     columns ??= SampleColumn.$all;
     assert(row.length == columns.length);
     if (columns == SampleColumn.$all) {
       return SampleRow(
-        textCol: row[0] as String,
-        byteaCol: row[1] as List<int>,
-        booleanCol: row[2] as bool,
-        doubleCol: row[3] as double,
-        bigintCol: row[4] as int,
-        smallintCol: row[5] as int,
-        uuidCol: row[6] as String,
-        timestampCol: row[7] as DateTime,
-        jsonbCol: row[8] as Map<String, dynamic>,
+        textCol: row[0] as String?,
+        byteaCol: row[1] as List<int>?,
+        booleanCol: row[2] as bool?,
+        doubleCol: row[3] as double?,
+        bigintCol: row[4] as int?,
+        smallintCol: row[5] as int?,
+        uuidCol: row[6] as String?,
+        timestampCol: row[7] as DateTime?,
+        jsonbCol: row[8] as Map<String, dynamic>?,
       );
     }
     final int $textCol = columns.indexOf(SampleColumn.textCol);
@@ -126,21 +125,22 @@ class SampleRow {
     final int $timestampCol = columns.indexOf(SampleColumn.timestampCol);
     final int $jsonbCol = columns.indexOf(SampleColumn.jsonbCol);
     return SampleRow(
-      textCol: $textCol == -1 ? null : row[$textCol] as String,
-      byteaCol: $byteaCol == -1 ? null : row[$byteaCol] as List<int>,
-      booleanCol: $booleanCol == -1 ? null : row[$booleanCol] as bool,
-      doubleCol: $doubleCol == -1 ? null : row[$doubleCol] as double,
-      bigintCol: $bigintCol == -1 ? null : row[$bigintCol] as int,
-      smallintCol: $smallintCol == -1 ? null : row[$smallintCol] as int,
-      uuidCol: $uuidCol == -1 ? null : row[$uuidCol] as String,
-      timestampCol: $timestampCol == -1 ? null : row[$timestampCol] as DateTime,
-      jsonbCol: $jsonbCol == -1 ? null : row[$jsonbCol] as Map<String, dynamic>,
+      textCol: $textCol == -1 ? null : row[$textCol] as String?,
+      byteaCol: $byteaCol == -1 ? null : row[$byteaCol] as List<int>?,
+      booleanCol: $booleanCol == -1 ? null : row[$booleanCol] as bool?,
+      doubleCol: $doubleCol == -1 ? null : row[$doubleCol] as double?,
+      bigintCol: $bigintCol == -1 ? null : row[$bigintCol] as int?,
+      smallintCol: $smallintCol == -1 ? null : row[$smallintCol] as int?,
+      uuidCol: $uuidCol == -1 ? null : row[$uuidCol] as String?,
+      timestampCol:
+          $timestampCol == -1 ? null : row[$timestampCol] as DateTime?,
+      jsonbCol:
+          $jsonbCol == -1 ? null : row[$jsonbCol] as Map<String, dynamic>?,
     );
   }
 
   factory SampleRow.fromRowMap(Map<String, Map<String, dynamic>> row,
-      {String table}) {
-    if (row == null) return null;
+      {String? table}) {
     if (table == null) {
       if (row.length == 1) {
         table = row.keys.first;
@@ -149,18 +149,17 @@ class SampleRow {
             'Unable to lookup table prefix: $table of ${row.keys}');
       }
     }
-    final map = row[table];
-    if (map == null) return null;
+    final map = row[table] ?? {};
     return SampleRow(
-      textCol: map[SampleColumn.textCol] as String,
-      byteaCol: map[SampleColumn.byteaCol] as List<int>,
-      booleanCol: map[SampleColumn.booleanCol] as bool,
-      doubleCol: map[SampleColumn.doubleCol] as double,
-      bigintCol: map[SampleColumn.bigintCol] as int,
-      smallintCol: map[SampleColumn.smallintCol] as int,
-      uuidCol: map[SampleColumn.uuidCol] as String,
-      timestampCol: map[SampleColumn.timestampCol] as DateTime,
-      jsonbCol: map[SampleColumn.jsonbCol] as Map<String, dynamic>,
+      textCol: map[SampleColumn.textCol] as String?,
+      byteaCol: map[SampleColumn.byteaCol] as List<int>?,
+      booleanCol: map[SampleColumn.booleanCol] as bool?,
+      doubleCol: map[SampleColumn.doubleCol] as double?,
+      bigintCol: map[SampleColumn.bigintCol] as int?,
+      smallintCol: map[SampleColumn.smallintCol] as int?,
+      uuidCol: map[SampleColumn.uuidCol] as String?,
+      timestampCol: map[SampleColumn.timestampCol] as DateTime?,
+      jsonbCol: map[SampleColumn.jsonbCol] as Map<String, dynamic>?,
     );
   }
 
@@ -174,7 +173,7 @@ class SampleRow {
       'smallintCol': smallintCol,
       'uuidCol': uuidCol,
       'timestampCol':
-          timestampCol?.toUtc()?.toIso8601String()?.replaceFirst('Z', ''),
+          timestampCol?.toUtc().toIso8601String().replaceFirst('Z', ''),
       'jsonbCol': jsonbCol,
     };
     if (removeNulls) {
@@ -193,7 +192,7 @@ class SampleRow {
       'smallint_col': smallintCol,
       'uuid_col': uuidCol,
       'timestamp_col':
-          timestampCol?.toUtc()?.toIso8601String()?.replaceFirst('Z', ''),
+          timestampCol?.toUtc().toIso8601String().replaceFirst('Z', ''),
       'jsonb_col': jsonbCol,
     };
     if (removeNulls) {
@@ -203,7 +202,7 @@ class SampleRow {
   }
 
   SampleKey toKey() => SampleKey(
-        textCol: textCol,
+        textCol: textCol!,
       );
 }
 
@@ -559,7 +558,7 @@ class SampleUpdate {
 
   String _next() => '$_prefix${_cnt++}';
 
-  void textCol(String value, {bool setIfNull = false}) {
+  void textCol(String? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       textCol$null();
       return;
@@ -578,7 +577,7 @@ class SampleUpdate {
     $expressions.add('"text_col" = $expr');
   }
 
-  void byteaCol(List<int> value, {bool setIfNull = false}) {
+  void byteaCol(List<int>? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       byteaCol$null();
       return;
@@ -597,7 +596,7 @@ class SampleUpdate {
     $expressions.add('"bytea_col" = $expr');
   }
 
-  void booleanCol(bool value, {bool setIfNull = false}) {
+  void booleanCol(bool? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       booleanCol$null();
       return;
@@ -616,7 +615,7 @@ class SampleUpdate {
     $expressions.add('"boolean_col" = $expr');
   }
 
-  void doubleCol(double value, {bool setIfNull = false}) {
+  void doubleCol(double? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       doubleCol$null();
       return;
@@ -635,7 +634,7 @@ class SampleUpdate {
     $expressions.add('"double_col" = $expr');
   }
 
-  void bigintCol(int value, {bool setIfNull = false}) {
+  void bigintCol(int? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       bigintCol$null();
       return;
@@ -660,7 +659,7 @@ class SampleUpdate {
     $expressions.add('"bigint_col" = "bigint_col" $sign ${amount.abs()}');
   }
 
-  void smallintCol(int value, {bool setIfNull = false}) {
+  void smallintCol(int? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       smallintCol$null();
       return;
@@ -685,7 +684,7 @@ class SampleUpdate {
     $expressions.add('"smallint_col" = "smallint_col" $sign ${amount.abs()}');
   }
 
-  void uuidCol(String value, {bool setIfNull = false}) {
+  void uuidCol(String? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       uuidCol$null();
       return;
@@ -704,7 +703,7 @@ class SampleUpdate {
     $expressions.add('"uuid_col" = $expr');
   }
 
-  void timestampCol(DateTime value, {bool setIfNull = false}) {
+  void timestampCol(DateTime? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       timestampCol$null();
       return;
@@ -723,7 +722,7 @@ class SampleUpdate {
     $expressions.add('"timestamp_col" = $expr');
   }
 
-  void jsonbCol(Map<String, dynamic> value, {bool setIfNull = false}) {
+  void jsonbCol(Map<String, dynamic>? value, {bool setIfNull = false}) {
     if (value == null && setIfNull) {
       jsonbCol$null();
       return;
@@ -744,7 +743,7 @@ class SampleUpdate {
 }
 
 class SampleTable {
-  final String schema;
+  final String? schema;
   final String name;
   final String fqn;
 
@@ -790,8 +789,8 @@ class SampleTable {
     ].join());
   }
 
-  Future<SampleRow> read(PostgreSQLExecutionContext conn, String textCol,
-      {List<String> columns}) async {
+  Future<SampleRow?> read(PostgreSQLExecutionContext conn, String textCol,
+      {List<String>? columns}) async {
     columns ??= SampleColumn.$all;
     final filter = SampleFilter()..primaryKeys(textCol);
     final list = await query(conn, columns: columns, limit: 2, filter: filter);
@@ -801,11 +800,11 @@ class SampleTable {
 
   Future<List<SampleRow>> query(
     PostgreSQLExecutionContext conn, {
-    List<String> columns,
-    List<String> orderBy,
-    int limit,
-    int offset,
-    SampleFilter filter,
+    List<String>? columns,
+    List<String>? orderBy,
+    int? limit,
+    int? offset,
+    SampleFilter? filter,
   }) async {
     columns ??= SampleColumn.$all;
     final whereQ = (filter == null || filter.$expressions.isEmpty)
@@ -828,29 +827,27 @@ class SampleTable {
   Future<Page<SampleRow>> paginate(
     PostgreSQLExecutionContext c, {
     int pageSize = 100,
-    List<String> columns,
-    SampleFilter filter,
-    SampleKey startAfter,
+    List<String>? columns,
+    SampleFilter? filter,
+    SampleKey? startAfter,
   }) async {
-    final List<String> fixedColumns =
-        columns == null ? null : List<String>.from(columns);
+    final fixedColumns = columns == null ? null : List<String>.from(columns);
     if (fixedColumns != null) {
       if (!fixedColumns.contains(SampleColumn.textCol)) {
         fixedColumns.add(SampleColumn.textCol);
       }
     }
-    final page = SamplePage._(null, false, c, this, pageSize, fixedColumns,
+    final page = SamplePage._([], false, c, this, pageSize, fixedColumns,
         filter?.clone(), startAfter);
     return await page.next();
   }
 
   Future<int> insert(
     PostgreSQLExecutionContext conn,
-    /* SampleRow | List<SampleRow> */
-    items, {
-    List<String> columns,
-    bool upsert,
-    bool onConflictDoNothing,
+    /* SampleRow | List<SampleRow> */ items, {
+    List<String>? columns,
+    bool? upsert,
+    bool? onConflictDoNothing,
   }) async {
     final List<SampleRow> rows =
         items is SampleRow ? [items] : items as List<SampleRow>;
@@ -870,7 +867,7 @@ class SampleTable {
         }
         if (value is List<int> && SampleColumn.$bytea.contains(col)) {
           expr = 'decode(@$key, \'base64\')';
-          value = convert.base64.encode(value as List<int>);
+          value = convert.base64.encode(value);
         }
         exprs.add(expr);
         params[key] = value;
@@ -880,7 +877,7 @@ class SampleTable {
     if (list.isEmpty) {
       return 0;
     }
-    var verb = 'INSERT';
+    final verb = 'INSERT';
     var onConflict = '';
     if (onConflictDoNothing ?? false) {
       onConflict = ' ON CONFLICT DO NOTHING';
@@ -903,7 +900,7 @@ class SampleTable {
   }
 
   Future<int> updateAll(PostgreSQLExecutionContext conn, SampleUpdate update,
-      {SampleFilter filter, int limit}) async {
+      {SampleFilter? filter, int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
@@ -918,8 +915,8 @@ class SampleTable {
     return deleteAll(conn, SampleFilter()..primaryKeys(textCol));
   }
 
-  Future<int> deleteAll(PostgreSQLExecutionContext conn, SampleFilter filter,
-      {int limit}) async {
+  Future<int> deleteAll(PostgreSQLExecutionContext conn, SampleFilter? filter,
+      {int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
@@ -937,21 +934,23 @@ class SamplePage extends Object with PageMixin<SampleRow> {
   final PostgreSQLExecutionContext _c;
   final SampleTable _table;
   final int _limit;
-  final List<String> _columns;
-  final SampleFilter _filter;
-  final SampleKey _startAfter;
+  final List<String>? _columns;
+  final SampleFilter? _filter;
+  final SampleKey? _startAfter;
 
   SamplePage._(this.items, this.isLast, this._c, this._table, this._limit,
       this._columns, this._filter, this._startAfter);
 
   @override
   Future<Page<SampleRow>> next() async {
-    if (isLast) return null;
+    if (isLast) {
+      throw StateError('`next` called on last page.');
+    }
     final filter = _filter?.clone() ?? SampleFilter();
-    if (items != null) {
+    if (items.isNotEmpty) {
       filter.keyAfter(items.last.toKey());
     } else if (_startAfter != null) {
-      filter.keyAfter(_startAfter);
+      filter.keyAfter(_startAfter!);
     }
     final rows = await _table.query(_c,
         columns: _columns,

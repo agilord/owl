@@ -7,7 +7,7 @@ import 'golden/pg_scan.g.dart';
 
 Future main() async {
   group('pg_scan', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
     final table = ScanTable('stbl', schema: 'test_scan');
 
     setUpAll(() async {
@@ -56,8 +56,8 @@ Future main() async {
       final row = list.firstWhere((r) =>
           r.id1 == '03' &&
           r.id2 != null &&
-          r.id2[0] == 0 &&
-          r.id2[1] == 4 &&
+          r.id2![0] == 0 &&
+          r.id2![1] == 4 &&
           r.id3 == '05');
       expect(row.payload, [3, 4, 5]);
     });
@@ -69,8 +69,8 @@ Future main() async {
       final row = list.firstWhere((r) =>
           r.id1 == '03' &&
           r.id2 != null &&
-          r.id2[0] == 0 &&
-          r.id2[1] == 4 &&
+          r.id2![0] == 0 &&
+          r.id2![1] == 4 &&
           r.id3 == '05');
       expect(row.payload, isNull);
     });
@@ -83,8 +83,8 @@ Future main() async {
       final row = list.firstWhere((r) =>
           r.id1 == '03' &&
           r.id2 != null &&
-          r.id2[0] == 0 &&
-          r.id2[1] == 4 &&
+          r.id2![0] == 0 &&
+          r.id2![1] == 4 &&
           r.id3 == '05');
       expect(row.payload, [3, 4, 5]);
     });

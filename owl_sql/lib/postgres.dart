@@ -9,8 +9,8 @@ export 'owl_sql.dart';
 Future<bool> writeInto(
   List<Table> tables,
   String targetFile, {
-  String header,
-  Map<String, String> imports,
+  String? header,
+  Map<String, String>? imports,
   bool targetCockroachDB = false,
   bool format = true,
 }) async {
@@ -26,7 +26,7 @@ Future<bool> writeInto(
 
 String generateSource(
   List<Table> tables, {
-  Map<String, String> imports,
+  Map<String, String>? imports,
   bool targetCockroachDB = false,
 }) {
   return _Codegen(tables, imports, targetCockroachDB).generate();
@@ -35,7 +35,7 @@ String generateSource(
 class _Codegen {
   final _sb = StringBuffer();
   final List<Table> _tables;
-  final Map<String, String> _imports;
+  final Map<String, String?>? _imports;
   final bool _targetCockroachDB;
   final bool _hasJsonb;
   final bool _hasBytea;
@@ -57,10 +57,9 @@ class _Codegen {
     if (_hasJsonb || _hasBytea) {
       imports.add('import \'dart:convert\' as convert;');
     }
-    imports.add('import \'package:meta/meta.dart\';');
     imports.add('import \'package:page/page.dart\';');
     imports.add('import \'package:postgres/postgres.dart\';');
-    _imports?.entries?.forEach((e) {
+    _imports?.entries.forEach((e) {
       if (e.value == null) {
         imports.add('import \'${e.key}\';');
       } else {
@@ -80,7 +79,7 @@ class _Codegen {
       _sb.writeln();
     }
 
-    for (Table table in _tables) {
+    for (var table in _tables) {
       _writeSchema(table);
       _writeKey(table);
       _writeRow(table);
@@ -96,7 +95,7 @@ class _Codegen {
   void _writeSchema(Table table) {
     _sb.writeln('\n/// Column names of ${table.type} tables.');
     _sb.writeln('class ${table.type}Column {');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       _sb.writeln('static const String ${col.fieldName} = \'${col.name}\';');
     }
     final cols =
@@ -138,17 +137,17 @@ class _Codegen {
     _sb.writeln('\n/// Unique continuity position for ${table.type} tables.');
     _sb.writeln(
         'class ${table.type}Key implements Comparable<${table.type}Key>{');
-    for (Column col in table.columns.where((c) => c.isKey)) {
+    for (var col in table.columns.where((c) => c.isKey)) {
       _sb.write('final ${_toDartType(col.type)} ${col.fieldName};\n');
     }
     _sb.write('\n  ${table.type}Key({\n');
-    for (Column col in table.columns.where((c) => c.isKey)) {
-      _sb.write('  @required this.${col.fieldName},\n');
+    for (var col in table.columns.where((c) => c.isKey)) {
+      _sb.write('  required this.${col.fieldName},\n');
     }
     _sb.writeln('  });');
     _sb.writeln('\n  @override int compareTo(${table.type}Key \$other) {');
     _sb.writeln('  int \$x = 0;');
-    for (Column col in table.columns.where((c) => c.isKey)) {
+    for (var col in table.columns.where((c) => c.isKey)) {
       final sign = col.isDescending ? '-' : '';
       if (col.type == SqlType.bytea) {
         _sb.writeln(
@@ -178,34 +177,34 @@ class _Codegen {
   void _writeRow(Table table) {
     final pks = table.columns.where((c) => c.isKey == true).toList();
     _sb.write('class ${table.type}Row {\n');
-    for (Column col in table.columns) {
-      _sb.write('final ${_toDartType(col.type)} ${col.fieldName};\n');
+    for (var col in table.columns) {
+      _sb.write('final ${_toDartType(col.type)}? ${col.fieldName};\n');
     }
-    for (Field field in table.fields ?? const []) {
-      _sb.writeln('${field.type} ${field.name};');
+    for (var field in table.fields ?? const []) {
+      _sb.writeln('${field.type}? ${field.name};');
     }
     _sb.write('\n  ${table.type}Row({\n');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       _sb.write('  this.${col.fieldName},\n');
     }
-    for (Field field in table.fields ?? const []) {
+    for (var field in table.fields ?? const []) {
       _sb.writeln('  this.${field.name},');
     }
     _sb.writeln('  });');
 
     _sb.writeln(
-        '\n  factory ${table.type}Row.fromRowList(List row, {List<String> columns}) {');
+        '\n  factory ${table.type}Row.fromRowList(List row, {List<String>? columns}) {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln('    assert(row.length == columns.length);');
     _sb.writeln('    if (columns ==${table.type}Column.\$all) {');
-    int colIdx = 0;
+    var colIdx = 0;
     final colX = table.columns.map((c) {
       final rowExp = _transformToDart(c.type, 'row[${colIdx++}]');
       return '${c.fieldName}: $rowExp,';
     }).join('');
     _sb.writeln('      return ${table.type}Row($colX);');
     _sb.writeln('    }');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       _sb.writeln(
           '    final int \$${col.fieldName} = columns.indexOf(${table.type}Column.${col.fieldName});');
     }
@@ -217,14 +216,12 @@ class _Codegen {
     _sb.writeln('  }\n');
 
     _sb.writeln(
-        '\n  factory ${table.type}Row.fromRowMap(Map<String, Map<String, dynamic>> row, {String table}) {');
-    _sb.writeln('    if (row == null) return null;');
+        '\n  factory ${table.type}Row.fromRowMap(Map<String, Map<String, dynamic>> row, {String? table}) {');
     _sb.writeln(
         '    if (table == null) {if (row.length == 1) {table = row.keys.first;} else {');
     _sb.writeln(
         '    throw StateError(\'Unable to lookup table prefix: \$table of \${row.keys}\');}}');
-    _sb.writeln('    final map = row[table];');
-    _sb.writeln('    if (map == null) return null;');
+    _sb.writeln('    final map = row[table] ?? {};');
     final colM = table.columns.map((c) {
       final colExpr =
           _transformToDart(c.type, 'map[${table.type}Column.${c.fieldName}]');
@@ -236,10 +233,10 @@ class _Codegen {
     _sb.writeln(
         '\n  Map<String, dynamic> toFieldMap({bool removeNulls = false}) {');
     _sb.writeln('    final \$map = {');
-    for (Column col in table.columns) {
-      String expr = col.fieldName;
+    for (var col in table.columns) {
+      var expr = col.fieldName;
       if (col.type == SqlType.timestamp) {
-        expr = '$expr?.toUtc()?.toIso8601String()?.replaceFirst(\'Z\', \'\')';
+        expr = '$expr?.toUtc().toIso8601String().replaceFirst(\'Z\', \'\')';
       }
       _sb.write('  \'${col.fieldName}\': $expr,\n');
     }
@@ -252,10 +249,10 @@ class _Codegen {
     _sb.writeln(
         '\n  Map<String, dynamic> toColumnMap({bool removeNulls = false}) {');
     _sb.writeln('    final \$map = {');
-    for (Column col in table.columns) {
-      String expr = col.fieldName;
+    for (var col in table.columns) {
+      var expr = col.fieldName;
       if (col.type == SqlType.timestamp) {
-        expr = '$expr?.toUtc()?.toIso8601String()?.replaceFirst(\'Z\', \'\')';
+        expr = '$expr?.toUtc().toIso8601String().replaceFirst(\'Z\', \'\')';
       }
       _sb.write('  \'${col.name}\': $expr,\n');
     }
@@ -267,7 +264,7 @@ class _Codegen {
     _sb.writeln('  }');
     _sb.writeln('\n  ${table.type}Key toKey() =>');
     _sb.writeln(
-        '    ${table.type}Key(${pks.map((c) => '${c.fieldName}: ${c.fieldName},').join()});');
+        '    ${table.type}Key(${pks.map((c) => '${c.fieldName}: ${c.fieldName}!,').join()});');
     _sb.write('}\n');
   }
 
@@ -301,8 +298,8 @@ class _Codegen {
     _sb.writeln('\n  String _next() => \'\$_prefix\${_cnt++}\';');
     _sb.write('\n  void keyAfter(${table.type}Key key) {');
 
-    String expr;
-    for (int i = pks.length - 1; i >= 0; i--) {
+    String? expr;
+    for (var i = pks.length - 1; i >= 0; i--) {
       _sb.writeln('    final key$i = _next();');
       final kv = _keyValue('key$i', 'key.${pks[i].fieldName}', pks[i].type);
       _sb.writeln('    \$params[key$i] = ${kv.convert};');
@@ -316,7 +313,7 @@ class _Codegen {
     }
     _sb.writeln('    \$expressions.add(\'$expr\');');
     _sb.write('  }\n');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       if (col.type == SqlType.jsonb) {
         _sb.writeln(
             '\n void ${col.fieldName}\$matches(${_toDartType(col.type)} value) {'
@@ -416,9 +413,9 @@ class _Codegen {
   String _transformToDart(String type, String expr) {
     switch (type) {
       case SqlType.tsvector:
-        return '_parseTsvector($expr as String)';
+        return '_parseTsvector($expr as String?)';
       default:
-        return '$expr as ${_toDartType(type)}';
+        return '$expr as ${_toDartType(type)}?';
     }
   }
 
@@ -450,14 +447,14 @@ class _Codegen {
     _sb.writeln('  int _cnt = 0;');
     _sb.writeln('\n  String join() => \$expressions.join(\', \');');
     _sb.writeln('\n  String _next() => \'\$_prefix\${_cnt++}\';');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       final kv = _keyValue('key', 'value', col.type);
-      String value = kv.convert;
+      var value = kv.convert;
       if (col.type == SqlType.tsvector) {
         value = '_tsvectorToString(value)';
       }
       _sb.writeln(
-          '\n void ${col.fieldName}(${_toDartType(col.type)} value, {bool setIfNull = false}) {'
+          '\n void ${col.fieldName}(${_toDartType(col.type)}? value, {bool setIfNull = false}) {'
           'if (value == null && setIfNull) {${col.fieldName}\$null(); return;}'
           'if (value == null) return;'
           'final key = _next();'
@@ -486,7 +483,7 @@ class _Codegen {
 
   void _writeTable(Table table) {
     _sb.writeln('class ${table.type}Table {');
-    _sb.writeln('  final String schema;');
+    _sb.writeln('  final String? schema;');
     _sb.writeln('  final String name;');
     _sb.writeln('  final String fqn;');
     final params = <String>[
@@ -538,11 +535,11 @@ class _Codegen {
     final families = StringBuffer();
     if (_targetCockroachDB && hasFamily) {
       families.write(
-          ', FAMILY "$firstFamily" (${familyColumns[firstFamily].map((c) => '"${c.name}"').join(', ')})');
+          ', FAMILY "$firstFamily" (${familyColumns[firstFamily]!.map((c) => '"${c.name}"').join(', ')})');
       for (final f in familyColumns.keys) {
         if (f == firstFamily) continue;
         families.write(
-            ', FAMILY "$f" (${familyColumns[f].map((c) => '"${c.name}"').join(', ')})');
+            ', FAMILY "$f" (${familyColumns[f]!.map((c) => '"${c.name}"').join(', ')})');
       }
     }
 
@@ -554,7 +551,7 @@ class _Codegen {
         '$familiesBlock'
         '      \');\',\n'
         '      ].join());');
-    for (Column col in table.columns) {
+    for (var col in table.columns) {
       if (col.isKey == true) continue;
       final emitFamily =
           _targetCockroachDB && ((col.family ?? firstFamily) != firstFamily);
@@ -566,16 +563,16 @@ class _Codegen {
           '$family'
           '\';\',].join());');
     }
-    for (Index index in table.indexes ?? []) {
+    for (var index in table.indexes ?? <Index>[]) {
       final cols = index.columns.map((s) {
         if (s.startsWith('-')) {
           return '"${s.substring(1)}" DESC';
         }
         return '"$s"';
       }).join(', ');
-      String storing = '';
-      if (index.including != null && index.including.isNotEmpty) {
-        final storedCols = index.including.map((s) => '"$s"').join(', ');
+      var storing = '';
+      if (index.including != null && index.including!.isNotEmpty) {
+        final storedCols = index.including!.map((s) => '"$s"').join(', ');
         storing = ' INCLUDE ($storedCols)';
       }
       if (!index.isInverted) {
@@ -608,7 +605,7 @@ class _Codegen {
         .map((c) => _guard(c.fieldName))
         .join(', ');
     _sb.writeln(
-        '\n  Future<${table.type}Row> read(PostgreSQLExecutionContext conn, $pks, {List<String> columns}) async {');
+        '\n  Future<${table.type}Row?> read(PostgreSQLExecutionContext conn, $pks, {List<String>? columns}) async {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln(
         '    final filter = ${table.type}Filter()..primaryKeys($pksParams);');
@@ -621,7 +618,7 @@ class _Codegen {
 
   void _writeTableQuery(Table table) {
     _sb.writeln(
-        '\n  Future<List<${table.type}Row>> query(PostgreSQLExecutionContext conn, {List<String> columns, List<String> orderBy, int limit, int offset, ${table.type}Filter filter,}) async {');
+        '\n  Future<List<${table.type}Row>> query(PostgreSQLExecutionContext conn, {List<String>? columns, List<String>? orderBy, int? limit, int? offset, ${table.type}Filter? filter,}) async {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? null : \'WHERE \${filter.\$join(\' AND \')}\';');
@@ -644,17 +641,17 @@ class _Codegen {
   void _writeTablePaginate(Table table) {
     _sb.writeln(
         '\n Future<Page<${table.type}Row>> paginate(PostgreSQLExecutionContext c, '
-        '{int pageSize = 100, List<String> columns, ${table.type}Filter filter, ${table.type}Key startAfter,}) async {');
+        '{int pageSize = 100, List<String>? columns, ${table.type}Filter? filter, ${table.type}Key? startAfter,}) async {');
     _sb.writeln(
-        '  final List<String> fixedColumns = columns == null ? null : List<String>.from(columns);');
+        '  final fixedColumns = columns == null ? null : List<String>.from(columns);');
     _sb.writeln('  if (fixedColumns != null) {');
-    for (Column c in table.columns.where((c) => c.isKey == true)) {
+    for (var c in table.columns.where((c) => c.isKey == true)) {
       _sb.writeln(
           '    if (!fixedColumns.contains(${table.type}Column.${c.fieldName})) {fixedColumns.add(${table.type}Column.${c.fieldName});}');
     }
     _sb.writeln('  }');
     _sb.writeln(
-        '    final page = ${table.type}Page._(null, false, c, this, pageSize, fixedColumns, filter?.clone(), startAfter);');
+        '    final page = ${table.type}Page._([], false, c, this, pageSize, fixedColumns, filter?.clone(), startAfter);');
     _sb.writeln('    return await page.next();');
     _sb.writeln('  }');
   }
@@ -662,7 +659,7 @@ class _Codegen {
   void _writeTableInsert(Table table) {
     final ff = (_hasJsonb || _hasBytea || _hasTsvector) ? ' ' : ' final';
     _sb.writeln(
-        '\n  Future<int> insert(PostgreSQLExecutionContext conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String> columns, bool upsert, bool onConflictDoNothing,}) async {');
+        '\n  Future<int> insert(PostgreSQLExecutionContext conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String>? columns, bool? upsert, bool? onConflictDoNothing,}) async {');
     _sb.writeln(
         '    final List<${table.type}Row> rows = items is ${table.type}Row ? [items] : items as List<${table.type}Row>;');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
@@ -686,16 +683,14 @@ class _Codegen {
       _sb.writeln(
           '        if (value is List<int> && ${table.type}Column.\$bytea.contains(col)) {');
       _sb.writeln('          expr = \'decode(@\$key, \\\'base64\\\')\';');
-      _sb.writeln(
-          '          value = convert.base64.encode(value as List<int>);');
+      _sb.writeln('          value = convert.base64.encode(value);');
       _sb.writeln('        }');
     }
     if (_hasTsvector) {
       _sb.writeln(
           '        if (value is Map<String, String> && ${table.type}Column.\$tsvector.contains(col)) {');
       _sb.writeln('          expr = \'@\$key::TSVECTOR\';');
-      _sb.writeln(
-          '          value = _tsvectorToString(value as Map<String, String>);');
+      _sb.writeln('          value = _tsvectorToString(value);');
       _sb.writeln('        }');
     }
     _sb.writeln('        exprs.add(expr);');
@@ -704,7 +699,8 @@ class _Codegen {
     _sb.writeln('      list.add(\'(\${exprs.join(\', \')})\');');
     _sb.writeln('    }');
     _sb.writeln('    if (list.isEmpty) {return 0;}');
-    _sb.writeln('    var verb = \'INSERT\';');
+    final verbPrefix = _targetCockroachDB ? 'var' : 'final';
+    _sb.writeln('    $verbPrefix verb = \'INSERT\';');
     _sb.writeln('    var onConflict = \'\';');
     _sb.writeln('    if (onConflictDoNothing ?? false) {');
     _sb.writeln('      onConflict = \' ON CONFLICT DO NOTHING\';');
@@ -747,7 +743,7 @@ class _Codegen {
 
   void _writeTableUpdateAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> updateAll(PostgreSQLExecutionContext conn, ${table.type}Update update, {${table.type}Filter filter, int limit}) async {');
+        '\n  Future<int> updateAll(PostgreSQLExecutionContext conn, ${table.type}Update update, {${table.type}Filter? filter, int? limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
@@ -777,7 +773,7 @@ class _Codegen {
 
   void _writeTableDeleteAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> deleteAll(PostgreSQLExecutionContext conn, ${table.type}Filter filter, {int limit}) async {');
+        '\n  Future<int> deleteAll(PostgreSQLExecutionContext conn, ${table.type}Filter? filter, {int? limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
@@ -795,18 +791,19 @@ class _Codegen {
     _sb.writeln('  final PostgreSQLExecutionContext _c;');
     _sb.writeln('   final ${table.type}Table _table;');
     _sb.writeln('  final int _limit;');
-    _sb.writeln('  final List<String> _columns;');
-    _sb.writeln('  final ${table.type}Filter _filter;');
-    _sb.writeln('  final ${table.type}Key _startAfter;');
+    _sb.writeln('  final List<String>? _columns;');
+    _sb.writeln('  final ${table.type}Filter? _filter;');
+    _sb.writeln('  final ${table.type}Key? _startAfter;');
     _sb.writeln(
         '\n  ${table.type}Page._(this.items, this.isLast, this._c, this._table, this._limit, this._columns, this._filter, this._startAfter);');
 
     _sb.writeln('\n  @override  Future<Page<${table.type}Row>> next() async {');
-    _sb.writeln('    if (isLast) return null;');
+    _sb.writeln(
+        '    if (isLast) { throw StateError(\'`next` called on last page.\');}');
     _sb.writeln(
         '    final filter = _filter?.clone() ?? ${table.type}Filter();');
     _sb.writeln(
-        '    if (items != null) {filter.keyAfter(items.last.toKey());} else if (_startAfter != null) {filter.keyAfter(_startAfter);}');
+        '    if (items.isNotEmpty) {filter.keyAfter(items.last.toKey());} else if (_startAfter != null) {filter.keyAfter(_startAfter!);}');
     final pks = table.columns
         .where((c) => c.isKey == true)
         .map((c) => '${table.type}Column.${c.fieldName},')
@@ -827,16 +824,15 @@ class _Codegen {
   void _writeParse() {
     if (_hasTsvector) {
       _sb.writeln('\n  String _tsvectorToString(Map<String, String> vector) {');
-      _sb.writeln('    if (vector == null) return null;');
       _sb.writeln(
-          '    return vector.keys.map((k) {final v = vector[k]; return v == null ? k : \'\$k:\$v\';}).join(\' \');');
+          '    return vector.keys.map((k) {final v = vector[k]; return v == null || v.isEmpty ? k : \'\$k:\$v\';}).join(\' \');');
       _sb.writeln('  }');
-      _sb.writeln('\n  Map<String, String> _parseTsvector(String vector) {');
+      _sb.writeln('\n  Map<String, String>? _parseTsvector(String? vector) {');
       _sb.writeln('    if (vector == null) return null;');
       _sb.writeln('    final result = <String, String>{};');
       _sb.writeln('    vector.split(\' \').forEach((part) {'
           'final ps = part.split(\':\'); '
-          'if (ps.length == 1) {result[part] = null;} '
+          'if (ps.length == 1) {result[part] = \'\';} '
           'else if (ps.length == 2) {result[ps[0]] = ps[1];}});');
       _sb.writeln('    return result;');
       _sb.writeln('  }');
@@ -845,8 +841,8 @@ class _Codegen {
 }
 
 _KV _keyValue(String name, String value, String type) {
-  String key = '@\$$name';
-  String convert = value;
+  var key = '@\$$name';
+  var convert = value;
   if (type == SqlType.timestamp) {
     key = '@\$$name::TIMESTAMP';
     convert = '$value.toUtc().toIso8601String().replaceFirst(\'Z\', \'\')';

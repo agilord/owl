@@ -7,7 +7,7 @@ import 'golden/pg_sample.g.dart';
 
 Future main() async {
   group('pg_scan', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
     final table = SampleTable('stbl', schema: 'test_sample');
 
     setUpAll(() async {
@@ -46,8 +46,8 @@ Future main() async {
     });
 
     test('read data', () async {
-      final row = await table.read(conn, 'id-value');
-      expect(row.textCol, 'id-value');
+      final row = await table.read(conn, 'id-value')!;
+      expect(row!.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
       expect(row.smallintCol, -135);
       expect(row.booleanCol, true);
@@ -95,7 +95,7 @@ Future main() async {
 
     test('read updated data', () async {
       final row = await table.read(conn, 'id-value');
-      expect(row.textCol, 'id-value');
+      expect(row!.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
       expect(row.smallintCol, 135);
       expect(row.booleanCol, true);

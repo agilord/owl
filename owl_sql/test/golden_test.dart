@@ -9,7 +9,7 @@ final _updateGoldenFiles = false;
 void main() {
   group('golden', () {
     Future validateGolden(List<Table> tables, String targetFile,
-        {Map<String, String> imports, bool targetCockroachDB = false}) async {
+        {Map<String, String>? imports, bool targetCockroachDB = false}) async {
       final name = targetFile.hashCode.toString() +
           '-' +
           DateTime.now().microsecondsSinceEpoch.toString() +

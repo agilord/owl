@@ -4,8 +4,8 @@ import 'src/text.dart';
 class Table {
   final String type;
   final List<Column> columns;
-  final List<Field> fields;
-  final List<Index> indexes;
+  final List<Field>? fields;
+  final List<Index>? indexes;
 
   Table(this.type, this.columns, {this.fields, this.indexes});
 }
@@ -14,26 +14,26 @@ class Table {
 class Column {
   final String name;
   final String type;
-  final String defaultsTo;
+  final String? defaultsTo;
   final bool isKey;
   final bool isUnique;
-  final String family;
+  final String? family;
   final bool isDescending;
 
   Column(
     this.name,
     this.type, {
     this.defaultsTo,
-    bool isKey,
-    bool isUnique,
+    bool? isKey,
+    bool? isUnique,
     this.family,
-    bool isDescending,
+    bool? isDescending,
   })  : isKey = isKey ?? false,
         isUnique = isUnique ?? false,
         isDescending = isDescending ?? false;
 
   String get fieldName => snakeToFieldName(name);
-  bool get hasFamily => family != null && family.isNotEmpty;
+  bool get hasFamily => family != null && family!.isNotEmpty;
 }
 
 abstract class SqlType {
@@ -65,7 +65,7 @@ class Index {
   final bool isInverted;
 
   /// Stores the listed column values alongside the index.
-  final List<String> including;
+  final List<String>? including;
 
   Index(
     this.nameSuffix,
