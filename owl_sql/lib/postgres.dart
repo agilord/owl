@@ -488,7 +488,7 @@ class _Codegen {
     _sb.writeln('  final String fqn;');
     final params = <String>[
       'this.schema',
-      if (_targetCockroachDB) 'bool isCockroachDB',
+      if (_targetCockroachDB) 'bool? isCockroachDB',
     ];
     final initializers = [
       'fqn = schema == null ? \'"\$name"\' : \'"\$schema"."\$name"\'',

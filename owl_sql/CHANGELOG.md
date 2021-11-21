@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.10.0
+# 0.10.1
+
+- Fix bool flag `isCockroachDB`.
+
+# 0.10.0
 
 - Migrated to null-safety.
 

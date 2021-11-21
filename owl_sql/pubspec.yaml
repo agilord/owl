@@ -1,7 +1,7 @@
 name: owl_sql
 description: >
     Source code generator for SQL CRUD (Postgresql and CockroachDB-flavoured SQL).
-version: 0.10.0
+version: 0.10.1
 
 homepage: https://github.com/agilord/owl
 
