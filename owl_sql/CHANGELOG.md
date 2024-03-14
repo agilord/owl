@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.12.0
+
+- Migrated to use `postgres` v3 API. Note: some types may not be supported.
+
 # 0.10.1
 
 - Fix bool flag `isCockroachDB`.

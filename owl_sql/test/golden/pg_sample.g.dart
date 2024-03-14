@@ -139,17 +139,7 @@ class SampleRow {
     );
   }
 
-  factory SampleRow.fromRowMap(Map<String, Map<String, dynamic>> row,
-      {String? table}) {
-    if (table == null) {
-      if (row.length == 1) {
-        table = row.keys.first;
-      } else {
-        throw StateError(
-            'Unable to lookup table prefix: $table of ${row.keys}');
-      }
-    }
-    final map = row[table] ?? {};
+  factory SampleRow.fromRowMap(Map<String, dynamic> map) {
     return SampleRow(
       textCol: map[SampleColumn.textCol] as String?,
       byteaCol: map[SampleColumn.byteaCol] as List<int>?,
@@ -750,7 +740,7 @@ class SampleTable {
   SampleTable(this.name, {this.schema})
       : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
-  Future init(PostgreSQLExecutionContext conn) async {
+  Future init(Session conn) async {
     await conn.execute([
       """CREATE TABLE IF NOT EXISTS $fqn ("text_col" TEXT, "bytea_col" BYTEA, "boolean_col" BOOLEAN, "double_col" DOUBLE PRECISION, "bigint_col" BIGINT, "smallint_col" SMALLINT, "uuid_col" UUID, "timestamp_col" TIMESTAMP, "jsonb_col" JSONB, PRIMARY KEY ("text_col")""",
       ');',
@@ -789,7 +779,7 @@ class SampleTable {
     ].join());
   }
 
-  Future<SampleRow?> read(PostgreSQLExecutionContext conn, String textCol,
+  Future<SampleRow?> read(Session conn, String textCol,
       {List<String>? columns}) async {
     columns ??= SampleColumn.$all;
     final filter = SampleFilter()..primaryKeys(textCol);
@@ -799,7 +789,7 @@ class SampleTable {
   }
 
   Future<List<SampleRow>> query(
-    PostgreSQLExecutionContext conn, {
+    Session conn, {
     List<String>? columns,
     List<String>? orderBy,
     int? limit,
@@ -818,14 +808,15 @@ class SampleTable {
     final qexpr = ['$fqn', whereQ, orderByQ, offsetQ, limitQ]
         .where((s) => s != null)
         .join(' ');
-    final list = await conn.mappedResultsQuery(
-        'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr',
-        substitutionValues: filter?.$params);
-    return list.map((row) => SampleRow.fromRowMap(row)).toList();
+    final list = await conn.execute(
+        Sql.named(
+            'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr'),
+        parameters: filter?.$params);
+    return list.map((row) => SampleRow.fromRowMap(row.toColumnMap())).toList();
   }
 
   Future<Page<SampleRow>> paginate(
-    PostgreSQLExecutionContext c, {
+    Session c, {
     int pageSize = 100,
     List<String>? columns,
     SampleFilter? filter,
@@ -843,7 +834,7 @@ class SampleTable {
   }
 
   Future<int> insert(
-    PostgreSQLExecutionContext conn,
+    Session conn,
     /* SampleRow | List<SampleRow> */ items, {
     List<String>? columns,
     bool? upsert,
@@ -888,18 +879,19 @@ class SampleTable {
           .join(', ');
       onConflict = ' ON CONFLICT ("text_col") DO UPDATE SET $colExprs';
     }
-    return conn.execute(
-        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
-        substitutionValues: params);
+    final rs = await conn.execute(
+        Sql.named(
+            '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict'),
+        parameters: params);
+    return rs.affectedRows;
   }
 
-  Future<int> update(
-      PostgreSQLExecutionContext conn, String textCol, SampleUpdate update) {
+  Future<int> update(Session conn, String textCol, SampleUpdate update) {
     return updateAll(conn, update,
         filter: SampleFilter()..primaryKeys(textCol));
   }
 
-  Future<int> updateAll(PostgreSQLExecutionContext conn, SampleUpdate update,
+  Future<int> updateAll(Session conn, SampleUpdate update,
       {SampleFilter? filter, int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
@@ -907,22 +899,25 @@ class SampleTable {
     final params = Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
-    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
-        substitutionValues: params);
+    final rs = await conn.execute(
+        Sql.named('UPDATE $fqn SET ${update.join()} $whereQ$limitQ'),
+        parameters: params);
+    return rs.affectedRows;
   }
 
-  Future<int> delete(PostgreSQLExecutionContext conn, String textCol) {
+  Future<int> delete(Session conn, String textCol) {
     return deleteAll(conn, SampleFilter()..primaryKeys(textCol));
   }
 
-  Future<int> deleteAll(PostgreSQLExecutionContext conn, SampleFilter? filter,
+  Future<int> deleteAll(Session conn, SampleFilter? filter,
       {int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
-    return conn.execute('DELETE FROM $fqn $whereQ$limitQ',
-        substitutionValues: filter?.$params);
+    final rs = await conn.execute(Sql.named('DELETE FROM $fqn $whereQ$limitQ'),
+        parameters: filter?.$params);
+    return rs.affectedRows;
   }
 }
 
@@ -931,7 +926,7 @@ class SamplePage extends Object with PageMixin<SampleRow> {
   final bool isLast;
   @override
   final List<SampleRow> items;
-  final PostgreSQLExecutionContext _c;
+  final Session _c;
   final SampleTable _table;
   final int _limit;
   final List<String>? _columns;

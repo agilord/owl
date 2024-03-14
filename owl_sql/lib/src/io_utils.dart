@@ -14,16 +14,10 @@ Future<bool> writeIntoFile<T>(/*T | List<T>*/ items, File file,
   final content = generate(tables);
   await file.writeAsString(content);
   if (format) {
-    var executable = Platform.isWindows ? 'dartfmt.bat' : 'dartfmt';
-    final p = Platform.executable.split(Platform.pathSeparator);
-    if (p.last == 'dart' || p.last == 'dart.exe') {
-      p.removeLast();
-      p.add(executable);
-      executable = p.join(Platform.pathSeparator);
-    }
-    final pr = await Process.run(executable, ['-w', file.path]);
+    final pr =
+        await Process.run(Platform.resolvedExecutable, ['format', file.path]);
     if (pr.exitCode != 0) {
-      print('dartfmt exited with code $exitCode');
+      print('dart format exited with code $exitCode');
     }
   }
   final newContent = await file.readAsString();

@@ -7,14 +7,23 @@ import 'golden/pg_sample.g.dart';
 
 Future main() async {
   group('pg_scan', () {
-    late PostgreSQLConnection conn;
+    late Connection conn;
     final table = SampleTable('stbl', schema: 'test_sample');
 
     setUpAll(() async {
       // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = PostgreSQLConnection('localhost', 5432, 'postgres',
-          username: 'postgres', password: 'postgres');
-      await conn.open();
+      conn = await Connection.open(
+        Endpoint(
+          host: 'localhost',
+          port: 5432,
+          database: 'postgres',
+          username: 'postgres',
+          password: 'postgres',
+        ),
+        settings: ConnectionSettings(
+          sslMode: SslMode.disable,
+        ),
+      );
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_sample;');
       await table.init(conn);
     });
@@ -41,12 +50,12 @@ Future main() async {
             uuidCol: '00112233-4455-6677-8899-aabbccddeeff',
           ));
 
-      final list = await conn.query('SELECT COUNT(*) FROM ${table.fqn};');
+      final list = await conn.execute('SELECT COUNT(*) FROM ${table.fqn};');
       expect(list[0][0], 1);
     });
 
     test('read data', () async {
-      final row = await table.read(conn, 'id-value')!;
+      final row = await table.read(conn, 'id-value');
       expect(row!.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
       expect(row.smallintCol, -135);

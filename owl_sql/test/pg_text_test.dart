@@ -7,14 +7,23 @@ import 'golden/pg_text.g.dart';
 
 Future main() async {
   group('pg_text', () {
-    late PostgreSQLConnection conn;
+    late Connection conn;
     final table = TextTable('ttbl', schema: 'test_text');
 
     setUpAll(() async {
       // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = PostgreSQLConnection('localhost', 5432, 'postgres',
-          username: 'postgres', password: 'postgres');
-      await conn.open();
+      conn = await Connection.open(
+        Endpoint(
+          host: 'localhost',
+          port: 5432,
+          database: 'postgres',
+          username: 'postgres',
+          password: 'postgres',
+        ),
+        settings: ConnectionSettings(
+          sslMode: SslMode.disable,
+        ),
+      );
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_text;');
       await table.init(conn);
     });
@@ -31,7 +40,7 @@ Future main() async {
             snippet: 'snippet-1',
             vector: <String, String>{'abc': '', 'bcd': '1,2', 'cde': '3C,8'},
           ));
-      final list = await conn.query('SELECT COUNT(*) FROM ${table.fqn};');
+      final list = await conn.execute('SELECT COUNT(*) FROM ${table.fqn};');
       expect(list[0][0], 1);
     });
 

@@ -216,12 +216,7 @@ class _Codegen {
     _sb.writeln('  }\n');
 
     _sb.writeln(
-        '\n  factory ${table.type}Row.fromRowMap(Map<String, Map<String, dynamic>> row, {String? table}) {');
-    _sb.writeln(
-        '    if (table == null) {if (row.length == 1) {table = row.keys.first;} else {');
-    _sb.writeln(
-        '    throw StateError(\'Unable to lookup table prefix: \$table of \${row.keys}\');}}');
-    _sb.writeln('    final map = row[table] ?? {};');
+        '\n  factory ${table.type}Row.fromRowMap(Map<String, dynamic> map) {');
     final colM = table.columns.map((c) {
       final colExpr =
           _transformToDart(c.type, 'map[${table.type}Column.${c.fieldName}]');
@@ -514,7 +509,7 @@ class _Codegen {
   }
 
   void _writeTableInit(Table table) {
-    _sb.write('\n  Future init(PostgreSQLExecutionContext conn) async {\n');
+    _sb.write('\n  Future init(Session conn) async {\n');
     final allColumnsCreateDdl = table.columns.map(_ddlCreate).join(', ');
     final pkColNames = table.columns.where((c) => c.isKey).map((c) {
       final order =
@@ -605,7 +600,7 @@ class _Codegen {
         .map((c) => _guard(c.fieldName))
         .join(', ');
     _sb.writeln(
-        '\n  Future<${table.type}Row?> read(PostgreSQLExecutionContext conn, $pks, {List<String>? columns}) async {');
+        '\n  Future<${table.type}Row?> read(Session conn, $pks, {List<String>? columns}) async {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln(
         '    final filter = ${table.type}Filter()..primaryKeys($pksParams);');
@@ -618,7 +613,7 @@ class _Codegen {
 
   void _writeTableQuery(Table table) {
     _sb.writeln(
-        '\n  Future<List<${table.type}Row>> query(PostgreSQLExecutionContext conn, {List<String>? columns, List<String>? orderBy, int? limit, int? offset, ${table.type}Filter? filter,}) async {');
+        '\n  Future<List<${table.type}Row>> query(Session conn, {List<String>? columns, List<String>? orderBy, int? limit, int? offset, ${table.type}Filter? filter,}) async {');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? null : \'WHERE \${filter.\$join(\' AND \')}\';');
@@ -630,17 +625,16 @@ class _Codegen {
         '    final limitQ = (limit == null || limit == 0) ? null : \'LIMIT \$limit\';');
     _sb.writeln(
         '  final qexpr = [\'\$fqn\', whereQ, orderByQ, offsetQ, limitQ].where((s) => s != null).join(\' \');');
-    _sb.writeln('    final list = await conn.mappedResultsQuery('
-        '\'SELECT \${columns.map((c) => \'"\$c"\').join(\', \')} '
-        'FROM \$qexpr\', substitutionValues: filter?.\$params);');
+    _sb.writeln('    final list = await conn.execute('
+        'Sql.named(\'SELECT \${columns.map((c) => \'"\$c"\').join(\', \')} '
+        'FROM \$qexpr\'), parameters: filter?.\$params);');
     _sb.writeln(
-        '    return list.map((row) => ${table.type}Row.fromRowMap(row)).toList();');
+        '    return list.map((row) => ${table.type}Row.fromRowMap(row.toColumnMap())).toList();');
     _sb.writeln('  }');
   }
 
   void _writeTablePaginate(Table table) {
-    _sb.writeln(
-        '\n Future<Page<${table.type}Row>> paginate(PostgreSQLExecutionContext c, '
+    _sb.writeln('\n Future<Page<${table.type}Row>> paginate(Session c, '
         '{int pageSize = 100, List<String>? columns, ${table.type}Filter? filter, ${table.type}Key? startAfter,}) async {');
     _sb.writeln(
         '  final fixedColumns = columns == null ? null : List<String>.from(columns);');
@@ -659,7 +653,7 @@ class _Codegen {
   void _writeTableInsert(Table table) {
     final ff = (_hasJsonb || _hasBytea || _hasTsvector) ? ' ' : ' final';
     _sb.writeln(
-        '\n  Future<int> insert(PostgreSQLExecutionContext conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String>? columns, bool? upsert, bool? onConflictDoNothing,}) async {');
+        '\n  Future<int> insert(Session conn, /* ${table.type}Row | List<${table.type}Row> */ items, {List<String>? columns, bool? upsert, bool? onConflictDoNothing,}) async {');
     _sb.writeln(
         '    final List<${table.type}Row> rows = items is ${table.type}Row ? [items] : items as List<${table.type}Row>;');
     _sb.writeln('    columns ??= ${table.type}Column.\$all;');
@@ -721,7 +715,8 @@ class _Codegen {
         '      onConflict = \' ON CONFLICT ($keyExpr) DO UPDATE SET \$colExprs\';');
     _sb.writeln('    }');
     _sb.writeln(
-        '    return conn.execute(\'\$verb INTO \$fqn (\${columns.map((c) => \'"\$c"\').join(\', \')}) VALUES \${list.join(\', \')}\$onConflict\', substitutionValues: params);');
+        '    final rs = await conn.execute(Sql.named(\'\$verb INTO \$fqn (\${columns.map((c) => \'"\$c"\').join(\', \')}) VALUES \${list.join(\', \')}\$onConflict\'), parameters: params);');
+    _sb.writeln('    return rs.affectedRows;');
     _sb.writeln('  }');
   }
 
@@ -735,7 +730,7 @@ class _Codegen {
         .map((c) => _guard(c.fieldName))
         .join(', ');
     _sb.writeln(
-        '\n  Future<int> update(PostgreSQLExecutionContext conn, $pks, ${table.type}Update update) {');
+        '\n  Future<int> update(Session conn, $pks, ${table.type}Update update) {');
     _sb.writeln(
         '    return updateAll(conn, update, filter: ${table.type}Filter()..primaryKeys($pksParams));');
     _sb.writeln('  }');
@@ -743,7 +738,7 @@ class _Codegen {
 
   void _writeTableUpdateAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> updateAll(PostgreSQLExecutionContext conn, ${table.type}Update update, {${table.type}Filter? filter, int? limit}) async {');
+        '\n  Future<int> updateAll(Session conn, ${table.type}Update update, {${table.type}Filter? filter, int? limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
@@ -751,7 +746,8 @@ class _Codegen {
     _sb.writeln(
         '    final limitQ = (limit == null || limit == 0) ? \'\' : \' LIMIT \$limit\';');
     _sb.writeln(
-        '    return conn.execute(\'UPDATE \$fqn SET \${update.join()} \$whereQ\$limitQ\', substitutionValues: params);');
+        '    final rs = await conn.execute(Sql.named(\'UPDATE \$fqn SET \${update.join()} \$whereQ\$limitQ\'), parameters: params);');
+    _sb.writeln('    return rs.affectedRows;');
     _sb.writeln('  }');
   }
 
@@ -764,8 +760,7 @@ class _Codegen {
         .where((c) => c.isKey == true)
         .map((c) => _guard(c.fieldName))
         .join(', ');
-    _sb.writeln(
-        '\n  Future<int> delete(PostgreSQLExecutionContext conn, $pks) {');
+    _sb.writeln('\n  Future<int> delete(Session conn, $pks) {');
     _sb.writeln(
         '    return deleteAll(conn, ${table.type}Filter()..primaryKeys($pksParams));');
     _sb.writeln('  }');
@@ -773,13 +768,14 @@ class _Codegen {
 
   void _writeTableDeleteAll(Table table) {
     _sb.writeln(
-        '\n  Future<int> deleteAll(PostgreSQLExecutionContext conn, ${table.type}Filter? filter, {int? limit}) async {');
+        '\n  Future<int> deleteAll(Session conn, ${table.type}Filter? filter, {int? limit}) async {');
     _sb.writeln(
         '    final whereQ = (filter == null || filter.\$expressions.isEmpty) ? \'\' : \'WHERE \${filter.\$join(\' AND \')}\';');
     _sb.writeln(
         '    final limitQ = (limit == null || limit == 0) ? \'\' : \' LIMIT \$limit\';');
     _sb.writeln(
-        '    return conn.execute(\'DELETE FROM \$fqn \$whereQ\$limitQ\', substitutionValues: filter?.\$params);');
+        '    final rs = await conn.execute(Sql.named(\'DELETE FROM \$fqn \$whereQ\$limitQ\'), parameters: filter?.\$params);');
+    _sb.writeln('    return rs.affectedRows;');
     _sb.writeln('  }');
   }
 
@@ -788,7 +784,7 @@ class _Codegen {
         '\nclass ${table.type}Page extends Object with PageMixin<${table.type}Row> {');
     _sb.writeln('  @override final bool isLast;');
     _sb.writeln('  @override final List<${table.type}Row> items;');
-    _sb.writeln('  final PostgreSQLExecutionContext _c;');
+    _sb.writeln('  final Session _c;');
     _sb.writeln('   final ${table.type}Table _table;');
     _sb.writeln('  final int _limit;');
     _sb.writeln('  final List<String>? _columns;');

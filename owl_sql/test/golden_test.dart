@@ -4,16 +4,14 @@ import 'package:test/test.dart';
 
 import 'package:owl_sql/postgres.dart';
 
-final _updateGoldenFiles = false;
+final _updateGoldenFiles = true;
 
 void main() {
   group('golden', () {
     Future validateGolden(List<Table> tables, String targetFile,
         {Map<String, String>? imports, bool targetCockroachDB = false}) async {
-      final name = targetFile.hashCode.toString() +
-          '-' +
-          DateTime.now().microsecondsSinceEpoch.toString() +
-          '.dart';
+      final name =
+          '${targetFile.hashCode}-${DateTime.now().microsecondsSinceEpoch}.dart';
       final tempFile =
           File(Directory.systemTemp.path + Platform.pathSeparator + name);
       try {

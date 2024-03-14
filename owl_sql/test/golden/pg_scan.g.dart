@@ -108,17 +108,7 @@ class ScanRow {
     );
   }
 
-  factory ScanRow.fromRowMap(Map<String, Map<String, dynamic>> row,
-      {String? table}) {
-    if (table == null) {
-      if (row.length == 1) {
-        table = row.keys.first;
-      } else {
-        throw StateError(
-            'Unable to lookup table prefix: $table of ${row.keys}');
-      }
-    }
-    final map = row[table] ?? {};
+  factory ScanRow.fromRowMap(Map<String, dynamic> map) {
     return ScanRow(
       id1: map[ScanColumn.id1] as String?,
       id2: map[ScanColumn.id2] as List<int>?,
@@ -446,7 +436,7 @@ class ScanTable {
   ScanTable(this.name, {this.schema})
       : fqn = schema == null ? '"$name"' : '"$schema"."$name"';
 
-  Future init(PostgreSQLExecutionContext conn) async {
+  Future init(Session conn) async {
     await conn.execute([
       """CREATE TABLE IF NOT EXISTS $fqn ("id1" TEXT, "id2" BYTEA, "id3" TEXT, "payload" BYTEA, PRIMARY KEY ("id1", "id2", "id3")""",
       ');',
@@ -457,8 +447,7 @@ class ScanTable {
     ].join());
   }
 
-  Future<ScanRow?> read(
-      PostgreSQLExecutionContext conn, String id1, List<int> id2, String id3,
+  Future<ScanRow?> read(Session conn, String id1, List<int> id2, String id3,
       {List<String>? columns}) async {
     columns ??= ScanColumn.$all;
     final filter = ScanFilter()..primaryKeys(id1, id2, id3);
@@ -468,7 +457,7 @@ class ScanTable {
   }
 
   Future<List<ScanRow>> query(
-    PostgreSQLExecutionContext conn, {
+    Session conn, {
     List<String>? columns,
     List<String>? orderBy,
     int? limit,
@@ -487,14 +476,15 @@ class ScanTable {
     final qexpr = ['$fqn', whereQ, orderByQ, offsetQ, limitQ]
         .where((s) => s != null)
         .join(' ');
-    final list = await conn.mappedResultsQuery(
-        'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr',
-        substitutionValues: filter?.$params);
-    return list.map((row) => ScanRow.fromRowMap(row)).toList();
+    final list = await conn.execute(
+        Sql.named(
+            'SELECT ${columns.map((c) => '"$c"').join(', ')} FROM $qexpr'),
+        parameters: filter?.$params);
+    return list.map((row) => ScanRow.fromRowMap(row.toColumnMap())).toList();
   }
 
   Future<Page<ScanRow>> paginate(
-    PostgreSQLExecutionContext c, {
+    Session c, {
     int pageSize = 100,
     List<String>? columns,
     ScanFilter? filter,
@@ -518,7 +508,7 @@ class ScanTable {
   }
 
   Future<int> insert(
-    PostgreSQLExecutionContext conn,
+    Session conn,
     /* ScanRow | List<ScanRow> */ items, {
     List<String>? columns,
     bool? upsert,
@@ -559,18 +549,20 @@ class ScanTable {
           .join(', ');
       onConflict = ' ON CONFLICT ("id1", "id2", "id3") DO UPDATE SET $colExprs';
     }
-    return conn.execute(
-        '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict',
-        substitutionValues: params);
+    final rs = await conn.execute(
+        Sql.named(
+            '$verb INTO $fqn (${columns.map((c) => '"$c"').join(', ')}) VALUES ${list.join(', ')}$onConflict'),
+        parameters: params);
+    return rs.affectedRows;
   }
 
-  Future<int> update(PostgreSQLExecutionContext conn, String id1, List<int> id2,
-      String id3, ScanUpdate update) {
+  Future<int> update(
+      Session conn, String id1, List<int> id2, String id3, ScanUpdate update) {
     return updateAll(conn, update,
         filter: ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
-  Future<int> updateAll(PostgreSQLExecutionContext conn, ScanUpdate update,
+  Future<int> updateAll(Session conn, ScanUpdate update,
       {ScanFilter? filter, int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
@@ -578,23 +570,24 @@ class ScanTable {
     final params = Map<String, dynamic>.from(filter?.$params ?? {})
       ..addAll(update.$params);
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
-    return conn.execute('UPDATE $fqn SET ${update.join()} $whereQ$limitQ',
-        substitutionValues: params);
+    final rs = await conn.execute(
+        Sql.named('UPDATE $fqn SET ${update.join()} $whereQ$limitQ'),
+        parameters: params);
+    return rs.affectedRows;
   }
 
-  Future<int> delete(
-      PostgreSQLExecutionContext conn, String id1, List<int> id2, String id3) {
+  Future<int> delete(Session conn, String id1, List<int> id2, String id3) {
     return deleteAll(conn, ScanFilter()..primaryKeys(id1, id2, id3));
   }
 
-  Future<int> deleteAll(PostgreSQLExecutionContext conn, ScanFilter? filter,
-      {int? limit}) async {
+  Future<int> deleteAll(Session conn, ScanFilter? filter, {int? limit}) async {
     final whereQ = (filter == null || filter.$expressions.isEmpty)
         ? ''
         : 'WHERE ${filter.$join(' AND ')}';
     final limitQ = (limit == null || limit == 0) ? '' : ' LIMIT $limit';
-    return conn.execute('DELETE FROM $fqn $whereQ$limitQ',
-        substitutionValues: filter?.$params);
+    final rs = await conn.execute(Sql.named('DELETE FROM $fqn $whereQ$limitQ'),
+        parameters: filter?.$params);
+    return rs.affectedRows;
   }
 }
 
@@ -603,7 +596,7 @@ class ScanPage extends Object with PageMixin<ScanRow> {
   final bool isLast;
   @override
   final List<ScanRow> items;
-  final PostgreSQLExecutionContext _c;
+  final Session _c;
   final ScanTable _table;
   final int _limit;
   final List<String>? _columns;

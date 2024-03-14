@@ -7,14 +7,23 @@ import 'golden/pg_scan.g.dart';
 
 Future main() async {
   group('pg_scan', () {
-    late PostgreSQLConnection conn;
+    late Connection conn;
     final table = ScanTable('stbl', schema: 'test_scan');
 
     setUpAll(() async {
       // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = PostgreSQLConnection('localhost', 5432, 'postgres',
-          username: 'postgres', password: 'postgres');
-      await conn.open();
+      conn = await Connection.open(
+        Endpoint(
+          host: 'localhost',
+          port: 5432,
+          database: 'postgres',
+          username: 'postgres',
+          password: 'postgres',
+        ),
+        settings: ConnectionSettings(
+          sslMode: SslMode.disable,
+        ),
+      );
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_scan;');
       await table.init(conn);
     });
@@ -45,7 +54,7 @@ Future main() async {
         await table.insert(conn, rows.sublist(i, i + 100).toList());
       }
 
-      final list = await conn.query('SELECT COUNT(*) FROM ${table.fqn};');
+      final list = await conn.execute('SELECT COUNT(*) FROM ${table.fqn};');
       expect(list[0][0], 8000);
     });
 
