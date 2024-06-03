@@ -1,29 +1,19 @@
 import 'dart:async';
 
+import 'package:owl_sql/runtime.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
 import 'golden/pg_sample.g.dart';
 
 Future main() async {
-  group('pg_scan', () {
+  withPostgresServer('pg_sample', (server) {
     late Connection conn;
-    final table = SampleTable('stbl', schema: 'test_sample');
+    final table = SampleRelation(Name('stbl', schema: 'test_sample'));
 
     setUpAll(() async {
-      // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = await Connection.open(
-        Endpoint(
-          host: 'localhost',
-          port: 5432,
-          database: 'postgres',
-          username: 'postgres',
-          password: 'postgres',
-        ),
-        settings: ConnectionSettings(
-          sslMode: SslMode.disable,
-        ),
-      );
+      conn = await server.newConnection();
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_sample;');
       await table.init(conn);
     });
@@ -50,12 +40,13 @@ Future main() async {
             uuidCol: '00112233-4455-6677-8899-aabbccddeeff',
           ));
 
-      final list = await conn.execute('SELECT COUNT(*) FROM ${table.fqn};');
+      final list =
+          await conn.execute('SELECT COUNT(*) FROM ${table.name.fqn};');
       expect(list[0][0], 1);
     });
 
     test('read data', () async {
-      final row = await table.read(conn, 'id-value');
+      final row = await table.read(conn, ['id-value']);
       expect(row!.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
       expect(row.smallintCol, -135);
@@ -71,39 +62,41 @@ Future main() async {
     });
 
     test('query data', () async {
-      Future run(SampleFilter filter) async {
-        final rows = await table.query(conn, filter: filter);
+      Future run(Expr<bool> Function(SampleColumns c) fn) async {
+        final rows = await table.query(conn, where: fn);
         expect(rows, hasLength(1));
       }
 
-      await run(SampleFilter()..bigintCol$equalsTo(4611686018427387904));
-      await run(SampleFilter()..bigintCol$greaterThan(4611686018427387903));
-      await run(SampleFilter()..smallintCol$equalsTo(-135));
-      await run(SampleFilter()..smallintCol$lessThan(-134));
-      await run(SampleFilter()..booleanCol$equalsTo(true));
-      await run(SampleFilter()..byteaCol$greaterThan([1, 1]));
-      await run(SampleFilter()..doubleCol$greaterThan(4.4));
-      await run(SampleFilter()..jsonbCol$matches({'a': 'a1'}));
+      await run((c) => c.bigintCol.equalsTo(4611686018427387904));
+      await run((c) => c.bigintCol.greaterThan(4611686018427387903));
+      await run((c) => c.smallintCol.equalsTo(-135));
+      await run((c) => c.smallintCol.lessThan(-134));
+      await run((c) => c.booleanCol.equalsTo(true));
+      await run((c) => c.byteaCol.greaterThan([1, 1]));
+      await run((c) => c.doubleCol.greaterThan(4.4));
+      await run((c) => c.jsonbCol.matches({'a': 'a1'}));
+      await run((c) => c.timestampCol.greaterThan(DateTime(1999, 01, 01)));
       await run(
-          SampleFilter()..timestampCol$greaterThan(DateTime(1999, 01, 01)));
-      await run(SampleFilter()
-        ..uuidCol$greaterThan('00112233-0000-6677-8899-aabbccddeeff'));
+          (c) => c.uuidCol.greaterThan('00112233-0000-6677-8899-aabbccddeeff'));
     });
 
     test('update data', () async {
-      await table.update(
-          conn,
-          'id-value',
-          SampleUpdate()
-            ..smallintCol(135)
-            ..byteaCol([2, 3])
-            ..jsonbCol({'x': 1})
-            ..timestampCol(DateTime(2002, 02, 03, 04, 05, 06).toUtc())
-            ..uuidCol('22110033-4455-6677-8899-aabbccddeeff'));
+      final updated = await table.update(
+        conn,
+        ['id-value'],
+        (c) => [
+          c.smallintCol.set(135),
+          c.byteaCol.set([2, 3]),
+          c.jsonbCol.set({'x': 1}),
+          c.timestampCol.set(DateTime(2002, 02, 03, 04, 05, 06).toUtc()),
+          c.uuidCol.set('22110033-4455-6677-8899-aabbccddeeff'),
+        ],
+      );
+      expect(updated, 1);
     });
 
     test('read updated data', () async {
-      final row = await table.read(conn, 'id-value');
+      final row = await table.read(conn, ['id-value']);
       expect(row!.textCol, 'id-value');
       expect(row.bigintCol, 4611686018427387904);
       expect(row.smallintCol, 135);
@@ -113,6 +106,11 @@ Future main() async {
       expect(row.jsonbCol, {'x': 1});
       expect(row.timestampCol, DateTime(2002, 02, 03, 04, 05, 06).toUtc());
       expect(row.uuidCol, '22110033-4455-6677-8899-aabbccddeeff');
+    });
+
+    test('delete data', () async {
+      expect(await table.delete(conn, SampleKey(textCol: 'id-value2')), 0);
+      expect(await table.delete(conn, SampleKey(textCol: 'id-value')), 1);
     });
   });
 }

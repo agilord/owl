@@ -1,29 +1,19 @@
 import 'dart:async';
 
+import 'package:owl_sql/runtime.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
 import 'golden/pg_scan.g.dart';
 
 Future main() async {
-  group('pg_scan', () {
+  withPostgresServer('pg_sample', (server) {
     late Connection conn;
-    final table = ScanTable('stbl', schema: 'test_scan');
+    final table = ScanRelation(Name('stbl', schema: 'test_scan'));
 
     setUpAll(() async {
-      // docker run --rm -it -p 5432:5432 postgres:11.1
-      conn = await Connection.open(
-        Endpoint(
-          host: 'localhost',
-          port: 5432,
-          database: 'postgres',
-          username: 'postgres',
-          password: 'postgres',
-        ),
-        settings: ConnectionSettings(
-          sslMode: SslMode.disable,
-        ),
-      );
+      conn = await server.newConnection();
       await conn.execute('CREATE SCHEMA IF NOT EXISTS test_scan;');
       await table.init(conn);
     });
@@ -54,7 +44,8 @@ Future main() async {
         await table.insert(conn, rows.sublist(i, i + 100).toList());
       }
 
-      final list = await conn.execute('SELECT COUNT(*) FROM ${table.fqn};');
+      final list =
+          await conn.execute('SELECT COUNT(*) FROM ${table.name.fqn};');
       expect(list[0][0], 8000);
     });
 
@@ -72,7 +63,7 @@ Future main() async {
     });
 
     test('paginate without all columns', () async {
-      final page = await table.paginate(conn, pageSize: 71, columns: []);
+      final page = await table.paginate(conn, pageSize: 71, columns: (c) => []);
       final list = await page.asStream().toList();
       expect(list, hasLength(8000));
       final row = list.firstWhere((r) =>
@@ -86,7 +77,7 @@ Future main() async {
 
     test('paginate with filter', () async {
       final page = await table.paginate(conn,
-          pageSize: 11, filter: ScanFilter()..id2$equalsTo([0, 4]));
+          pageSize: 11, where: (c) => c.id2.equalsTo([0, 4]));
       final list = await page.asStream().toList();
       expect(list, hasLength(400));
       final row = list.firstWhere((r) =>

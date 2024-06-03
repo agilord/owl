@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 
 import 'package:owl_sql/postgres.dart';
 
-final _updateGoldenFiles = true;
+final _updateGoldenFiles = false;
 
 void main() {
   group('golden', () {
